@@ -385,8 +385,9 @@ class Show extends Component
         return view('livewire.projects.show', [
             'project' => $project,
             'countdown' => $project->meetingCountdown(),
-            // The 판단 결과 현황 (submission tallies) section renders an empty
-            // state until submissions land (audit §5). The 판단 panel is real.
+            // The 판단 결과 현황 tally: share sums per current 판단 (result_id),
+            // grouped by colour, measured against the target.
+            'tally' => $this->resultTally($project),
             'shareholders' => $this->rosterQuery($project)->take(8)->get(),
             'matchCount' => $this->rosterQuery($project)->count(),
             'shareholderCount' => $project->shareholders()->count(),
@@ -394,6 +395,62 @@ class Show extends Component
             'managingAssignment' => $this->managingAssignment($project),
             'workerOptions' => $this->workerOptions(),
         ]);
+    }
+
+    /**
+     * The 판단 결과 현황 tally: the sum of project shares behind each current 판단
+     * (the shareholders' `result_id`), grouped into colour bands and measured
+     * against the target. Only judged 판단 with shares appear, mirroring the
+     * dashboard design. `hasData` is false when nothing has been judged yet.
+     *
+     * @return array{groups: array<int, array<string, mixed>>, hasData: bool}
+     */
+    private function resultTally(Project $project): array
+    {
+        $target = (int) ($project->shares_target ?? 0);
+
+        // Sum of project shares behind each current 판단 (judged rows only).
+        // reorder() drops the relationship's default `order by no`, which MySQL's
+        // only_full_group_by mode rejects alongside this GROUP BY.
+        $sums = $project->shareholders()
+            ->reorder()
+            ->whereNotNull('result_id')
+            ->groupBy('result_id')
+            ->selectRaw('result_id, COALESCE(SUM(shares), 0) as shares')
+            ->pluck('shares', 'result_id');
+
+        $groups = [];
+
+        foreach ($project->results as $result) {
+            $shares = (int) ($sums[$result->id] ?? 0);
+
+            if ($shares === 0) {
+                continue; // Only populated 판단 are listed.
+            }
+
+            $row = [
+                'name' => $result->name,
+                'color' => $result->color,
+                'shares' => $shares,
+                'percent' => $target > 0 ? $shares / $target * 100 : null,
+            ];
+
+            // Consecutive results sharing a colour merge into one total group.
+            $last = array_key_last($groups);
+
+            if ($last !== null && $groups[$last]['color'] === $result->color) {
+                $groups[$last]['rows'][] = $row;
+                $groups[$last]['totalShares'] += $shares;
+            } else {
+                $groups[] = ['color' => $result->color, 'rows' => [$row], 'totalShares' => $shares];
+            }
+        }
+
+        foreach ($groups as &$group) {
+            $group['totalPercent'] = $target > 0 ? $group['totalShares'] / $target * 100 : null;
+        }
+
+        return ['groups' => $groups, 'hasData' => $groups !== []];
     }
 
     /**

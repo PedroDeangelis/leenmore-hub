@@ -5,6 +5,7 @@ namespace Tests\Feature\Projects;
 use App\Enums\ProjectStatus;
 use App\Livewire\Projects\Show;
 use App\Models\Project;
+use App\Models\ProjectShareholder;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Carbon;
@@ -350,6 +351,43 @@ class ProjectShowTest extends TestCase
             ->assertDontSee('remaining');
 
         Carbon::setTestNow();
+    }
+
+    public function test_judgment_results_tally_shows_the_share_breakdown(): void
+    {
+        $admin = User::factory()->admin()->create();
+        $project = Project::factory()->published()->create(['shares_target' => 1000]);
+
+        // Two same-colour 판단 merge into one colour group total.
+        $signed = $project->results()->create(['name' => '위임(대면_서명)', 'color' => 'green', 'sort_order' => 0]);
+        $text = $project->results()->create(['name' => '위임(비대면_문자)', 'color' => 'green', 'sort_order' => 1]);
+        ProjectShareholder::factory()->for($project)->create(['result_id' => $signed->id, 'shares' => 250]);
+        ProjectShareholder::factory()->for($project)->create(['result_id' => $text->id, 'shares' => 150]);
+
+        $this->actingAs($admin)
+            ->get(route('projects.show', $project))
+            ->assertOk()
+            ->assertSee('위임(대면_서명)')
+            ->assertSee('위임(비대면_문자)')
+            ->assertSee('25.00%')   // 250 / 1000
+            ->assertSee('15.00%')   // 150 / 1000
+            ->assertSee('40.00%')   // group total 400 / 1000
+            ->assertDontSee('No judgment results yet');
+    }
+
+    public function test_judgment_results_shows_the_empty_state_when_nothing_is_judged(): void
+    {
+        $admin = User::factory()->admin()->create();
+        $project = Project::factory()->published()->create(['shares_target' => 1000]);
+        $project->results()->create(['name' => '거부', 'color' => 'red', 'sort_order' => 0]);
+
+        // A roster row exists but has not been judged (result_id is null).
+        ProjectShareholder::factory()->for($project)->create(['result_id' => null, 'shares' => 500]);
+
+        $this->actingAs($admin)
+            ->get(route('projects.show', $project))
+            ->assertOk()
+            ->assertSee('No judgment results yet');
     }
 
     public function test_the_page_is_localised(): void

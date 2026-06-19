@@ -51,6 +51,22 @@
                 </a>
             @endcan
 
+            @can('view-submissions')
+                <a href="{{ route('reports.index') }}" wire:navigate
+                    class="flex items-center gap-3 rounded-lg px-3 py-3 transition text-sm font-medium {{ request()->routeIs('reports.*') ? 'bg-white/15 text-white' : 'text-white/80 hover:bg-white/10' }}">
+                    <x-heroicon-o-document-chart-bar class="size-5" />
+                    {{ __('Reports') }}
+                </a>
+            @endcan
+
+            @can('edit-submissions')
+                <a href="{{ route('activity.index') }}" wire:navigate
+                    class="flex items-center gap-3 rounded-lg px-3 py-3 transition text-sm font-medium {{ request()->routeIs('activity.*') ? 'bg-white/15 text-white' : 'text-white/80 hover:bg-white/10' }}">
+                    <x-heroicon-o-pencil-square class="size-5" />
+                    {{ __('Activity reports') }}
+                </a>
+            @endcan
+
             @can('manage-users')
                 <a href="{{ route('users.index') }}" wire:navigate
                     class="flex items-center gap-3 rounded-lg px-3 py-3 transition text-sm font-medium {{ request()->routeIs('users.*') ? 'bg-white/15 text-white' : 'text-white/80 hover:bg-white/10' }}">

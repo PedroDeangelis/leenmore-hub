@@ -66,6 +66,17 @@ class Project extends Model
     }
 
     /**
+     * Every activity report (Submission) filed against this project, newest
+     * first. These are what the reports archive lists and drills into.
+     *
+     * @return HasMany<Submission, $this>
+     */
+    public function submissions(): HasMany
+    {
+        return $this->hasMany(Submission::class)->latest('date')->latest('id');
+    }
+
+    /**
      * Live countdown to the shareholder meeting (the end date), or null when
      * no end date is set.
      */

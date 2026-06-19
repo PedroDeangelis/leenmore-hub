@@ -93,6 +93,12 @@
                         </div>
                     </div>
                 @endif
+
+                {{-- File an activity report for this shareholder --}}
+                <a href="{{ route('worker.projects.shareholders.report', [$project, $row]) }}" wire:navigate
+                    class="mt-3 inline-flex w-full items-center justify-center gap-1.5 rounded-lg bg-primary py-2.5 text-[13px] font-semibold text-white transition hover:bg-primary-light active:scale-[0.99]">
+                    <x-heroicon-o-pencil-square class="size-4" />{{ __('Activity report') }}
+                </a>
             </div>
         @empty
             <div class="flex flex-col items-center justify-center gap-2 px-6 py-20 text-center">

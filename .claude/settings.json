@@ -24,7 +24,22 @@
       "Bash(sort -t: -k2 -rn)",
       "Bash(vendor/bin/pint app/Models/Project.php app/Livewire/Projects/Show.php)",
       "Bash(vendor/bin/pint tests/Feature/Projects/ProjectShowTest.php)",
-      "Bash(vendor/bin/pint app/Livewire/Projects/Show.php app/Models/Project.php tests/Feature/Projects/ProjectShowTest.php)"
+      "Bash(vendor/bin/pint app/Livewire/Projects/Show.php app/Models/Project.php tests/Feature/Projects/ProjectShowTest.php)",
+      "Bash(xargs ls -1)",
+      "Bash(php -r 'json_decode\\(file_get_contents\\(\"lang/ko.json\"\\)\\); echo json_last_error_msg\\(\\).PHP_EOL;')",
+      "Bash(vendor/bin/pint app/Livewire/Reports app/Http/Controllers/ReportFileController.php app/Models/Project.php app/Models/Submission.php database/factories/SubmissionFactory.php tests/Feature/Reports)",
+      "Bash(php -r 'json_decode\\(file_get_contents\\(\"lang/ko.json\"\\)\\); echo \"ko.json: \".json_last_error_msg\\(\\).PHP_EOL;')",
+      "Bash(vendor/bin/pint app/Livewire/Projects/Show.php tests/Feature/Projects/ProjectShowTest.php)",
+      "Bash(vendor/bin/pint app/Livewire/Projects/Show.php)",
+      "Bash(python3 -)",
+      "Bash(timeout 60 lando mysql -N -e \"SELECT COUNT\\(*\\) AS total_reports, COUNT\\(DISTINCT project_shareholder_id\\) AS distinct_shareholders FROM laravel.submissions WHERE project_id=1 AND deleted_at IS NULL;\")",
+      "Bash(timeout 60 lando mysql -t -e \"SELECT id, project_shareholder_id, result, date FROM laravel.submissions WHERE project_id=1 AND deleted_at IS NULL AND id IN \\(SELECT MAX\\(id\\) FROM laravel.submissions WHERE project_id=1 AND deleted_at IS NULL GROUP BY project_shareholder_id\\);\")",
+      "Bash(timeout 60 lando mysql -N -e \"SELECT @@sql_mode;\")",
+      "Bash(timeout 90 lando mysql -t -e ' *)",
+      "Bash(vendor/bin/pint app/Livewire/Worker/ActivityReport.php tests/Feature/Worker/ActivityReportTest.php)",
+      "Bash(vendor/bin/pint app/Livewire/Concerns/ActivityReportForm.php app/Livewire/Worker/ActivityReport.php app/Models/Submission.php app/Models/ProjectShareholder.php)",
+      "Bash(vendor/bin/pint app/Livewire/Activity app/Livewire/Concerns tests/Feature/Activity routes/admin.php)",
+      "Bash(vendor/bin/pint --test app/Models/Submission.php app/Models/ProjectShareholder.php app/Livewire/Worker/ActivityReport.php resources)"
     ]
   }
 }

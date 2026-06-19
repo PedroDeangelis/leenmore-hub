@@ -177,7 +177,7 @@
         {{-- Judgment results + legend --}}
         <div class="flex flex-wrap items-start gap-3.5">
 
-            {{-- 판단 결과 현황 (submission tallies — empty until the submissions model lands) --}}
+            {{-- 판단 결과 현황 (share sums per current 판단, grouped into colour bands) --}}
             <x-project.card class="min-w-[580px] flex-[1.75]">
                 <div class="flex items-center justify-between border-b border-zinc-100 px-4 py-3">
                     <div class="flex items-center gap-2.5">
@@ -219,11 +219,54 @@
                         </div>
                     @endif
                 </div>
-                <div class="flex flex-col items-center justify-center gap-2 px-6 py-16 text-center">
-                    <x-heroicon-o-chart-bar class="size-7 text-zinc-300" />
-                    <p class="text-sm font-medium text-zinc-500">{{ __('No judgment results yet') }}</p>
-                    <p class="text-xs text-zinc-400">{{ __('Judgment breakdowns will appear here once worker submissions are tallied.') }}</p>
-                </div>
+                @if ($tally['hasData'])
+                    <table class="w-full text-[13px]">
+                        <colgroup>
+                            <col class="w-[34%]"><col class="w-[15%]"><col class="w-[23%]"><col class="w-[17%]"><col class="w-[11%]">
+                        </colgroup>
+                        <thead>
+                            <tr>
+                                <th class="text-left {{ $thClass }}">{{ __('Judgment') }}</th>
+                                <th class="text-right {{ $thClass }}">{{ __('Shares') }}</th>
+                                <th class="text-right {{ $thClass }}">{{ __('Progress by result (%)') }}</th>
+                                <th class="text-right {{ $thClass }}">{{ __('Group total (shares)') }}</th>
+                                <th class="text-right {{ $thClass }}">{{ __('Group total (%)') }}</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach ($tally['groups'] as $gi => $group)
+                                @foreach ($group['rows'] as $i => $row)
+                                    {{-- A 2px white rule separates each colour group (its first row). --}}
+                                    @php($sep = $gi > 0 && $i === 0 ? 'border-t-2 border-t-white' : '')
+                                    <tr class="{{ $row['color']->bandClasses() }}">
+                                        <td class="border-b border-b-black/5 border-l-[3px] {{ $sep }} px-3.5 py-2.5 font-semibold text-zinc-700 {{ $row['color']->borderClasses() }}">{{ $row['name'] }}</td>
+                                        <td class="border-b border-b-black/5 {{ $sep }} px-3.5 py-2.5 text-right tabular-nums text-zinc-700">{{ number_format($row['shares']) }}</td>
+                                        <td class="border-b border-b-black/5 {{ $sep }} px-3.5 py-2">
+                                            <div class="flex flex-col items-end gap-1.5">
+                                                <span class="text-right font-semibold tabular-nums {{ $row['color']->accentText() }}">{{ $row['percent'] !== null ? number_format($row['percent'], 2) . '%' : '—' }}</span>
+                                                @if ($row['percent'] !== null)
+                                                    <div class="h-1.5 w-full overflow-hidden rounded-full bg-black/[0.08]">
+                                                        <div class="h-full rounded-full {{ $row['color']->barClasses() }}" style="width:{{ max(min($row['percent'], 100), 2) }}%"></div>
+                                                    </div>
+                                                @endif
+                                            </div>
+                                        </td>
+                                        @if ($i === 0)
+                                            <td rowspan="{{ count($group['rows']) }}" class="{{ $sep }} px-3.5 py-2.5 text-right align-middle font-bold tabular-nums {{ $group['color']->totalClasses() }}">{{ number_format($group['totalShares']) }}</td>
+                                            <td rowspan="{{ count($group['rows']) }}" class="{{ $sep }} px-3.5 py-2.5 text-right align-middle font-bold tabular-nums {{ $group['color']->totalClasses() }}">{{ $group['totalPercent'] !== null ? number_format($group['totalPercent'], 2) . '%' : '—' }}</td>
+                                        @endif
+                                    </tr>
+                                @endforeach
+                            @endforeach
+                        </tbody>
+                    </table>
+                @else
+                    <div class="flex flex-col items-center justify-center gap-2 px-6 py-16 text-center">
+                        <x-heroicon-o-chart-bar class="size-7 text-zinc-300" />
+                        <p class="text-sm font-medium text-zinc-500">{{ __('No judgment results yet') }}</p>
+                        <p class="text-xs text-zinc-400">{{ __('Judgment breakdowns will appear here once worker submissions are tallied.') }}</p>
+                    </div>
+                @endif
             </x-project.card>
 
             {{-- 판단 (the project's result definitions) --}}

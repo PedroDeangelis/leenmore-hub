@@ -9,6 +9,7 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 
 /**
  * A shareholder's assignment to one project's meeting — the per-project half of
@@ -78,6 +79,16 @@ class ProjectShareholder extends Model
     public function workers(): BelongsToMany
     {
         return $this->belongsToMany(User::class, 'project_shareholder_user')->withTimestamps();
+    }
+
+    /**
+     * The activity reports filed against this assignment, newest first.
+     *
+     * @return HasMany<Submission, $this>
+     */
+    public function submissions(): HasMany
+    {
+        return $this->hasMany(Submission::class)->latest('date')->latest('id');
     }
 
     /**
