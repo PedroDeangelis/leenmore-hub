@@ -1,0 +1,14 @@
+{
+    "folders": [
+		{
+			"path": "../../../.."
+		},
+		{
+			"path": "../../../../../leenmore-storage"
+		},
+		{
+			"path": "../../../../../leenmore-app"
+		}
+	],
+    "settings": {}
+}

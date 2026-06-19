@@ -1,0 +1,30 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(composer require *)",
+      "Bash(vendor/bin/pint --test)",
+      "Bash(grep -n 'public function only\\\\|public function except\\\\|protected $only\\\\|->only' vendor/laravel/framework/src/Illuminate/Validation/Rules/Enum.php)",
+      "Bash(vendor/bin/pint app/Enums/ProjectStatus.php app/Models/Project.php app/Livewire/Projects/Show.php app/Livewire/Projects/Index.php app/Concerns/ProjectValidationRules.php database/factories/ProjectFactory.php database/migrations/2026_06_16_000004_drop_soft_deletes_from_projects.php tests/Feature/Projects/)",
+      "Bash(grep -E \"^o-\\(archive-box|trash|pause\\)\\\\.svg$\")",
+      "Bash(vendor/bin/pint app/Support/MeetingCountdown.php app/Models/Project.php app/Livewire/Projects/Show.php tests/Feature/Projects/ProjectShowTest.php)",
+      "Bash(vendor/bin/pint app/Enums/PersonType.php app/Models/Shareholder.php app/Models/ProjectShareholder.php app/Models/Project.php database/factories/ShareholderFactory.php database/factories/ProjectShareholderFactory.php database/migrations/2026_06_16_000005_create_shareholders_table.php database/migrations/2026_06_16_000006_create_project_shareholders_table.php tests/Feature/Shareholders/)",
+      "Bash(find . -path ./node_modules -prune -o -iname \"getFormatedShareholders*\" -print)",
+      "Bash(find . -path ./node_modules -prune -o -iname \"setShareholderUpdateList*\" -print)",
+      "Bash(grep -E \"^o-\\(arrow-up-tray|x-mark|users|document-arrow-up|table-cells\\)\\\\.svg$\")",
+      "Bash(vendor/bin/pint app/Imports app/Support/KoreanRegistration.php app/Livewire/Projects/ShareholderImport.php app/Models/ProjectShareholder.php app/Providers/AppServiceProvider.php database/migrations/2026_06_16_000007_add_worker_names_to_project_shareholders.php tests/Feature/Shareholders)",
+      "Bash(vendor/bin/pint app/Imports/ShareholderImporter.php app/Livewire/Projects/ShareholderImport.php app/Http/Controllers/ShareholderTemplateController.php routes/admin.php tests/Feature/Shareholders)",
+      "Bash(vendor/bin/pint app/Imports/ShareholderImporter.php app/Jobs/ImportShareholdersJob.php app/Livewire/Projects/ShareholderImport.php tests/Feature/Shareholders)",
+      "Bash(vendor/bin/pint app/Models app/Imports/ShareholderImporter.php app/Livewire/Projects/Show.php database/migrations tests/Feature/Shareholders)",
+      "Bash(php -r \"var_export\\(array_values\\(array_filter\\(array_map\\('trim', explode\\('/', '소재불명/주소불명'\\)\\)\\)\\)\\);\")",
+      "Bash(grep -E \"^\\(o|m\\)-\\(user-plus|users|pencil-square|x-mark\\)\\\\.svg$\")",
+      "Bash(grep -n \"Manage results modal\\\\|x-ui.modal\\\\|Back to top\\\\|@endcan\\\\|</div>\\\\s*$\" resources/views/livewire/projects/show.blade.php)",
+      "Bash(gunzip -f leemore_app_design.html.gz)",
+      "Bash(grep -aoE \".{0,80}README.{0,400}\" leemore_app_design.html)",
+      "Bash(awk '{ print NR\": \"length\\($0\\) }' leemore_app_design.html)",
+      "Bash(sort -t: -k2 -rn)",
+      "Bash(vendor/bin/pint app/Models/Project.php app/Livewire/Projects/Show.php)",
+      "Bash(vendor/bin/pint tests/Feature/Projects/ProjectShowTest.php)",
+      "Bash(vendor/bin/pint app/Livewire/Projects/Show.php app/Models/Project.php tests/Feature/Projects/ProjectShowTest.php)"
+    ]
+  }
+}

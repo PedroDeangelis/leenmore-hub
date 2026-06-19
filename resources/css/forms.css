@@ -1,0 +1,25 @@
+/* Form styles — used by <x-ui.input>, <x-ui.select>, <x-ui.checkbox> and raw form fields. */
+
+@layer components {
+    .form-label {
+        @apply block text-sm font-medium text-zinc-800;
+    }
+
+    .form-input,
+    .form-select {
+        @apply block w-full rounded-lg border border-zinc-300 bg-white px-3 py-3 text-sm text-zinc-900 placeholder:text-zinc-400 focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/30;
+    }
+
+    /* One-time-code fields (2FA): centered, monospaced, wide tracking. */
+    .form-input-otp {
+        @apply w-44 text-center font-mono text-xl tracking-[0.5em];
+    }
+
+    .form-checkbox {
+        @apply size-4 rounded border-zinc-300 text-primary accent-primary focus:ring-primary/40;
+    }
+
+    .form-error {
+        @apply text-sm text-red-600;
+    }
+}

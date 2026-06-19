@@ -1,0 +1,27 @@
+/* Button styles — used by <x-ui.button> and anywhere a styled button/link is needed. */
+
+@layer components {
+    .btn {
+        @apply inline-flex cursor-pointer items-center justify-center gap-2 rounded-lg px-4 py-3 text-sm font-medium transition focus:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 disabled:cursor-not-allowed disabled:opacity-50;
+    }
+
+    .btn-primary {
+        @apply bg-primary text-white hover:bg-primary-light;
+    }
+
+    .btn-danger {
+        @apply bg-red-600 text-white hover:bg-red-500;
+    }
+
+    .btn-outline {
+        @apply border border-zinc-300 bg-white text-zinc-700 hover:bg-zinc-50;
+    }
+
+    .btn-ghost {
+        @apply text-zinc-600 hover:bg-zinc-100;
+    }
+
+    .btn-tall{
+        @apply py-4;
+    }
+}

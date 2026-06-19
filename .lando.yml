@@ -1,0 +1,41 @@
+name: leenmore-hub
+recipe: laravel
+
+config:
+  webroot: public
+  php: "8.4"
+  composer_version: "2.7.6"
+
+# env_file:
+#   - .env
+
+services:
+  node:
+    type: node:20
+
+  phpmyadmin:
+    type: phpmyadmin:5.2
+    hosts:
+      - database
+
+database:
+  type: mysql:8.0
+  portforward: 3306
+  creds:
+    user: laravel
+    password: laravel
+    database: laravel
+    host: database
+
+tooling:
+  npm:
+    service: node
+    cmd: npm
+
+  npx:
+    service: node
+    cmd: npx
+
+  artisan:
+    service: appserver
+    cmd: php artisan
