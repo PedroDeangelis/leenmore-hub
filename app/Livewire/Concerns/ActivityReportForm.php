@@ -82,11 +82,13 @@ trait ActivityReportForm
     }
 
     /**
-     * Enforce the chosen 판단's contact / attachment requirements.
+     * Enforce the chosen 판단's contact / attachment requirements. When editing,
+     * an attachment already stored on the report (kept, not re-uploaded) counts
+     * towards the requirement — pass its count as $existingAttachmentCount.
      *
      * @param  Collection<int, string>  $contacts
      */
-    protected function requireContactAndAttachment(ProjectResult $result, Collection $contacts): void
+    protected function requireContactAndAttachment(ProjectResult $result, Collection $contacts, int $existingAttachmentCount = 0): void
     {
         if ($result->contact_required && $contacts->isEmpty()) {
             throw ValidationException::withMessages([
@@ -94,7 +96,7 @@ trait ActivityReportForm
             ]);
         }
 
-        if ($result->attachment_required && $this->attachments === []) {
+        if ($result->attachment_required && $this->attachments === [] && $existingAttachmentCount === 0) {
             throw ValidationException::withMessages([
                 'attachments' => __('An attachment is required for this result.'),
             ]);

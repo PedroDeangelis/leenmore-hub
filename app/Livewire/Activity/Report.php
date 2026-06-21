@@ -124,7 +124,8 @@ class Report extends Component
 
         $result = $project->results->firstWhere('id', $this->resultId);
         $contacts = $this->filledContacts();
-        $this->requireContactAndAttachment($result, $contacts);
+        // A file kept from the original report satisfies the attachment requirement.
+        $this->requireContactAndAttachment($result, $contacts, count($this->existingAttachments));
 
         $worker = User::findOrFail($this->selectedWorkerId);
         [$paths, $consentPaths] = $this->storeFiles($projectShareholder->id);
@@ -170,6 +171,12 @@ class Report extends Component
         $project = Project::with('results')->findOrFail($this->projectId);
         $projectShareholder = ProjectShareholder::with(['shareholder', 'result'])->findOrFail($this->projectShareholderId);
 
+        // The stored file paths of the report being edited, so each kept
+        // attachment can link to the file-server route by its stable index.
+        $editingFiles = $this->editingId !== null
+            ? ($projectShareholder->submissions()->find($this->editingId)?->files ?? [])
+            : [];
+
         return view('livewire.activity.report', [
             'project' => $project,
             'projectShareholder' => $projectShareholder,
@@ -177,6 +184,7 @@ class Report extends Component
             'workers' => $this->workerOptions(),
             'previousSubmissions' => $projectShareholder->submissions()->with('creator')->get(),
             'showForm' => $this->editingId !== null || $this->selectedWorkerId !== null,
+            'editingFiles' => $editingFiles,
         ]);
     }
 

@@ -116,6 +116,55 @@ class ActivityReportTest extends TestCase
         $this->assertSame($result->id, $assignment->fresh()->result_id);
     }
 
+    public function test_an_existing_attachment_satisfies_the_requirement_when_editing(): void
+    {
+        [$project, $assignment, $result, $worker] = $this->scenario();
+        $needsFile = ProjectResult::factory()->for($project)->create([
+            'name' => '첨부필요',
+            'attachment_required' => true,
+        ]);
+        $submission = Submission::factory()->forAssignment($assignment)->create([
+            'user_id' => $worker->id,
+            'result' => '위임(대면_서명)',
+            'files' => ['submissions/'.$assignment->id.'/existing.jpg'],
+        ]);
+
+        $this->actingAs(User::factory()->admin()->create());
+
+        // Switching to an attachment-required 판단 without uploading a new file is
+        // fine because the report already has one.
+        Livewire::test(Report::class, ['project' => $project, 'projectShareholder' => $assignment])
+            ->call('editReport', $submission->id)
+            ->set('resultId', $needsFile->id)
+            ->call('save')
+            ->assertHasNoErrors();
+
+        $this->assertSame('첨부필요', $submission->fresh()->result);
+    }
+
+    public function test_removing_the_only_attachment_re_triggers_the_requirement(): void
+    {
+        [$project, $assignment, $result, $worker] = $this->scenario();
+        $needsFile = ProjectResult::factory()->for($project)->create([
+            'name' => '첨부필요',
+            'attachment_required' => true,
+        ]);
+        $submission = Submission::factory()->forAssignment($assignment)->create([
+            'user_id' => $worker->id,
+            'result' => '위임(대면_서명)',
+            'files' => ['submissions/'.$assignment->id.'/existing.jpg'],
+        ]);
+
+        $this->actingAs(User::factory()->admin()->create());
+
+        Livewire::test(Report::class, ['project' => $project, 'projectShareholder' => $assignment])
+            ->call('editReport', $submission->id)
+            ->call('removeExistingAttachment', 0)
+            ->set('resultId', $needsFile->id)
+            ->call('save')
+            ->assertHasErrors('attachments');
+    }
+
     public function test_admin_can_delete_a_report_and_the_current_result_resyncs(): void
     {
         [$project, $assignment, $result, $worker] = $this->scenario();
