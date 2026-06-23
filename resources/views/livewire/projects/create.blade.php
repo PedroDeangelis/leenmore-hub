@@ -12,7 +12,7 @@
     </div>
 
     <div class="max-w-2xl">
-        <div class="card-wrapper">
+        <x-ui.card class="p-6">
             <x-ui.card-heading icon="heroicon-o-megaphone" :heading="__('Project details')"
                 :subheading="__('Workers see published projects and the message below.')" />
 
@@ -50,6 +50,6 @@
                     </x-ui.button>
                 </div>
             </form>
-        </div>
+        </x-ui.card>
     </div>
 </section>

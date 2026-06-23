@@ -27,6 +27,7 @@ class AppServiceProvider extends ServiceProvider
         'view-projects' => [UserRole::Admin, UserRole::Office],
         'view-submissions' => [UserRole::Admin, UserRole::Office],
         'view-receipts' => [UserRole::Admin, UserRole::Office],
+        'manage-receipts' => [UserRole::Admin, UserRole::Office],
         'view-activity-data' => [UserRole::Admin, UserRole::Office],
         'edit-submissions' => [UserRole::Admin, UserRole::Office],
         'manage-shareholders' => [UserRole::Admin, UserRole::Office],

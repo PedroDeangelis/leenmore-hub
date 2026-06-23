@@ -15,7 +15,7 @@
     </div>
 
 
-    <x-project.card class="p-4 max-w-300 mx-auto mb-6 flex flex-wrap gap-3">
+    <x-ui.card class="p-4 max-w-300 mx-auto mb-6 flex flex-wrap gap-3">
         <div class="relative min-w-[220px] flex-1">
             <input type="search" wire:model.live.debounce.300ms="search" placeholder="{{ __('Search...') }}"
                 aria-label="{{ __('Search shareholders') }}"
@@ -33,52 +33,51 @@
             <x-heroicon-o-chevron-down
                 class="pointer-events-none absolute end-3 top-1/2 size-3.5 -translate-y-1/2 text-[#9aa0aa]" />
         </div>
-    </x-project.card>
+    </x-ui.card>
 
     <div class="">
 
 
         {{-- Roster --}}
-        <div class="overflow-hidden rounded-2xl border border-[#e8eaef] bg-white">
-            <div
-                class="grid grid-cols-[minmax(150px,1.6fr)_0.9fr_1.1fr_1.4fr_0.7fr_auto] items-center gap-3 border-b border-[#e8eaef] bg-[#fafbfc] px-5 py-[13px] text-[11px] font-semibold tracking-wide text-[#8b919c]">
-                <span>{{ __('Shareholder') }}</span>
-                <span class="text-right">{{ __('Shares') }}</span>
-                <span class="text-right">{{ __('Total shares') }}</span>
-                <span>{{ __('Judgment') }}</span>
-                <span class="text-right">{{ __('Reports') }}</span>
-                <span></span>
-            </div>
+        <x-ui.table>
+            <x-slot:head>
+                <x-ui.table.heading>{{ __('Shareholder') }}</x-ui.table.heading>
+                <x-ui.table.heading align="end">{{ __('Shares') }}</x-ui.table.heading>
+                <x-ui.table.heading align="end">{{ __('Total shares') }}</x-ui.table.heading>
+                <x-ui.table.heading>{{ __('Judgment') }}</x-ui.table.heading>
+                <x-ui.table.heading align="end">{{ __('Reports') }}</x-ui.table.heading>
+                <x-ui.table.heading align="end">{{ __('Action') }}</x-ui.table.heading>
+            </x-slot:head>
 
             @forelse ($rows as $row)
-                <a href="{{ route('activity.report', [$project, $row]) }}" wire:navigate
-                    wire:key="roster-{{ $row->id }}"
-                    class="grid grid-cols-[minmax(150px,1.6fr)_0.9fr_1.1fr_1.4fr_0.7fr_auto] items-center gap-3 border-b border-[#f1f2f5] px-5 py-3.5 transition hover:bg-[#fafbfc]">
-                    <span class="flex flex-wrap items-baseline gap-1.5">
-                        <span class="text-[14px] font-bold text-[#171a1f]">{{ $row->shareholder?->name ?? '—' }}</span>
-                        <span
-                            class="text-[12.5px] font-medium tabular-nums text-[#8b919c]">{{ $row->shareholder?->date_of_birth_code ?: $row->shareholder?->registration }}</span>
-                    </span>
-                    <span
-                        class="text-right text-[13px] tabular-nums text-[#3d424b]">{{ $row->shares !== null ? number_format($row->shares) : '—' }}</span>
-                    <span
-                        class="text-right text-[13px] tabular-nums text-[#3d424b]">{{ $row->shares_total !== null ? number_format($row->shares_total) : '—' }}</span>
-                    <span>
+                <tr wire:key="roster-{{ $row->id }}" class="hover:bg-zinc-50">
+                    <x-ui.table.cell>
+                        <div class="flex flex-wrap items-baseline gap-1.5">
+                            <a href="{{ route('activity.report', [$project, $row]) }}" wire:navigate
+                                class="font-medium text-zinc-800 hover:text-primary hover:underline">{{ $row->shareholder?->name ?? '—' }}</a>
+                            <span
+                                class="text-xs tabular-nums text-zinc-500">{{ $row->shareholder?->date_of_birth_code ?: $row->shareholder?->registration }}</span>
+                        </div>
+                    </x-ui.table.cell>
+                    <x-ui.table.cell align="end" class="tabular-nums text-zinc-600">{{ $row->shares !== null ? number_format($row->shares) : '—' }}</x-ui.table.cell>
+                    <x-ui.table.cell align="end" class="tabular-nums text-zinc-600">{{ $row->shares_total !== null ? number_format($row->shares_total) : '—' }}</x-ui.table.cell>
+                    <x-ui.table.cell>
                         @if ($row->result)
                             <x-result.chip :color="$row->result->color" :label="$row->result->name" />
                         @else
-                            <span class="text-[12.5px] text-[#aeb4be]">{{ __('Not yet entered') }}</span>
+                            <span class="text-zinc-400">{{ __('Not yet entered') }}</span>
                         @endif
-                    </span>
-                    <span
-                        class="text-right text-[12.5px] font-semibold tabular-nums {{ $row->submissions_count > 0 ? 'text-[#2f4bb8]' : 'text-[#c5cad2]' }}">{{ number_format($row->submissions_count) }}</span>
-                    <x-heroicon-o-chevron-right class="size-4 text-[#c5cad2]" />
-                </a>
+                    </x-ui.table.cell>
+                    <x-ui.table.cell align="end" class="tabular-nums {{ $row->submissions_count > 0 ? 'font-medium text-zinc-700' : 'text-zinc-400' }}">{{ number_format($row->submissions_count) }}</x-ui.table.cell>
+                    <x-ui.table.cell align="end">
+                        <a href="{{ route('activity.report', [$project, $row]) }}" wire:navigate
+                            class="text-primary hover:underline">{{ __('View') }}</a>
+                    </x-ui.table.cell>
+                </tr>
             @empty
-                <div class="px-5 py-16 text-center text-sm font-medium text-[#aeb4be]">
-                    {{ __('No shareholders found.') }}</div>
+                <x-ui.table.empty :cols="6">{{ __('No shareholders found.') }}</x-ui.table.empty>
             @endforelse
-        </div>
+        </x-ui.table>
 
         @if ($rows->hasPages())
             <div class="mt-6">{{ $rows->links() }}</div>

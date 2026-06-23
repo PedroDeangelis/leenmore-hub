@@ -67,11 +67,35 @@
                 </a>
             @endcan
 
+            @can('view-receipts')
+                <a href="{{ route('receipts.index') }}" wire:navigate
+                    class="flex items-center gap-3 rounded-lg px-3 py-3 transition text-sm font-medium {{ request()->routeIs('receipts.*') ? 'bg-white/15 text-white' : 'text-white/80 hover:bg-white/10' }}">
+                    <x-heroicon-o-receipt-percent class="size-5" />
+                    {{ __('Receipts') }}
+                </a>
+            @endcan
+
+            @can('manage-resources')
+                <a href="{{ route('resources.index') }}" wire:navigate
+                    class="flex items-center gap-3 rounded-lg px-3 py-3 transition text-sm font-medium {{ request()->routeIs('resources.*') ? 'bg-white/15 text-white' : 'text-white/80 hover:bg-white/10' }}">
+                    <x-heroicon-o-folder class="size-5" />
+                    {{ __('Project resources') }}
+                </a>
+            @endcan
+
             @can('manage-users')
                 <a href="{{ route('users.index') }}" wire:navigate
                     class="flex items-center gap-3 rounded-lg px-3 py-3 transition text-sm font-medium {{ request()->routeIs('users.*') ? 'bg-white/15 text-white' : 'text-white/80 hover:bg-white/10' }}">
                     <x-heroicon-o-users class="size-5" />
                     {{ __('Users') }}
+                </a>
+            @endcan
+
+            @can('manage-settings')
+                <a href="{{ route('options.edit') }}" wire:navigate
+                    class="flex items-center gap-3 rounded-lg px-3 py-3 transition text-sm font-medium {{ request()->routeIs('options.*') ? 'bg-white/15 text-white' : 'text-white/80 hover:bg-white/10' }}">
+                    <x-heroicon-o-cog-6-tooth class="size-5" />
+                    {{ __('Options') }}
                 </a>
             @endcan
         </nav>

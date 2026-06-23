@@ -9,6 +9,7 @@ use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Attributes\Hidden;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 use Illuminate\Support\Str;
@@ -59,6 +60,16 @@ class User extends Authenticatable
     public function assignedShareholders(): BelongsToMany
     {
         return $this->belongsToMany(ProjectShareholder::class, 'project_shareholder_user')->withTimestamps();
+    }
+
+    /**
+     * The expense receipts this worker has submitted.
+     *
+     * @return HasMany<Receipt, $this>
+     */
+    public function receipts(): HasMany
+    {
+        return $this->hasMany(Receipt::class);
     }
 
     /**

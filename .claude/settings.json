@@ -39,7 +39,27 @@
       "Bash(vendor/bin/pint app/Livewire/Worker/ActivityReport.php tests/Feature/Worker/ActivityReportTest.php)",
       "Bash(vendor/bin/pint app/Livewire/Concerns/ActivityReportForm.php app/Livewire/Worker/ActivityReport.php app/Models/Submission.php app/Models/ProjectShareholder.php)",
       "Bash(vendor/bin/pint app/Livewire/Activity app/Livewire/Concerns tests/Feature/Activity routes/admin.php)",
-      "Bash(vendor/bin/pint --test app/Models/Submission.php app/Models/ProjectShareholder.php app/Livewire/Worker/ActivityReport.php resources)"
+      "Bash(vendor/bin/pint --test app/Models/Submission.php app/Models/ProjectShareholder.php app/Livewire/Worker/ActivityReport.php resources)",
+      "Bash(grep -rn '\\\\$grid\\\\|\\\\$thClass\\\\|grid-cols-\\\\[minmax\\\\|#e8eaef\\\\|#fafbfc' resources/views/livewire/reports/show.blade.php resources/views/livewire/activity/roster.blade.php)",
+      "Bash(grep -E '^\\(o-\\(tag|trash|plus|x-mark|check|pencil-square|receipt-percent|clipboard-document-list|cog-6-tooth|magnifying-glass|megaphone|chevron-right|home\\)|s-megaphone\\)\\\\.svg$')",
+      "Bash(php -r 'json_decode\\(file_get_contents\\(\"lang/en.json\"\\)\\); echo \"en.json: \".json_last_error_msg\\(\\).PHP_EOL;')",
+      "Bash(vendor/bin/pint app/Models/Setting.php app/Models/Receipt.php app/Models/ReceiptCategory.php app/Models/User.php app/Concerns/ReceiptValidationRules.php app/Livewire/Worker/ReceiptCreate.php app/Livewire/Worker/ReceiptHistory.php app/Livewire/Receipts/Index.php app/Livewire/Admin/Options.php database/factories/ReceiptFactory.php database/factories/ReceiptCategoryFactory.php database/migrations/2026_06_21_*.php tests/Feature/Worker/ReceiptCreateTest.php tests/Feature/Worker/ReceiptHistoryTest.php tests/Feature/Receipts/ReceiptsIndexTest.php tests/Feature/Admin/OptionsTest.php)",
+      "Bash(vendor/bin/pint --test routes/worker.php routes/admin.php app/Models/User.php)",
+      "Bash(grep -E '^o-\\(paper-clip|arrow-up-tray\\)\\\\.svg$')",
+      "Bash(php -r 'json_decode\\(file_get_contents\\(\"lang/ko.json\"\\)\\); echo \"ko: \".json_last_error_msg\\(\\).PHP_EOL;')",
+      "Bash(php -r 'json_decode\\(file_get_contents\\(\"lang/en.json\"\\)\\); echo \"en: \".json_last_error_msg\\(\\).PHP_EOL;')",
+      "Bash(vendor/bin/pint app/Http/Controllers/ReceiptFileController.php app/Livewire/Worker/ReceiptCreate.php app/Models/Receipt.php app/Concerns/ReceiptValidationRules.php database/factories/ReceiptFactory.php database/migrations/2026_06_21_000004_add_attachment_to_receipts_table.php routes/web.php tests/Feature/Worker/ReceiptCreateTest.php)",
+      "Bash(vendor/bin/pint app/Livewire/Worker/ReceiptCreate.php tests/Feature/Worker/ReceiptCreateTest.php)",
+      "Bash(vendor/bin/pint app/Providers/AppServiceProvider.php app/Livewire/Receipts/Index.php app/Livewire/Receipts/Edit.php routes/admin.php tests/Feature/Receipts/ReceiptsIndexTest.php tests/Feature/Receipts/ReceiptEditTest.php)",
+      "Bash(php -r 'json_decode\\(file_get_contents\\(\"lang/ko.json\"\\)\\); echo \"ko:\".json_last_error_msg\\(\\);')",
+      "Bash(php -r 'json_decode\\(file_get_contents\\(\"lang/en.json\"\\)\\); echo \" en:\".json_last_error_msg\\(\\).PHP_EOL;')",
+      "Bash(grep -E '^\\(o-\\(folder|folder-open|chevron-right|chevron-up|chevron-down|arrow-left|arrow-down-tray|arrow-up-tray|paper-clip|link|magnifying-glass|pencil-square|trash|plus|check|x-mark|eye|cloud-arrow-up|document\\)|m-\\(document|folder|document-text\\)\\)\\\\.svg$')",
+      "Bash(php -r 'json_decode\\(file_get_contents\\(\"lang/ko.json\"\\)\\); echo \"ko:\".json_last_error_msg\\(\\).PHP_EOL;')",
+      "Bash(php -r 'json_decode\\(file_get_contents\\(\"lang/en.json\"\\)\\); echo \"en:\".json_last_error_msg\\(\\).PHP_EOL;')",
+      "Bash(vendor/bin/pint app/Enums/ResourceType.php app/Models/ProjectResource.php app/Models/Project.php database/factories/ProjectResourceFactory.php app/Livewire/Worker/ResourceIndex.php app/Livewire/Worker/ResourceShow.php app/Livewire/Resources/Index.php app/Livewire/Resources/Manage.php app/Http/Controllers/ProjectResourceFileController.php routes/worker.php routes/admin.php routes/web.php database/migrations/2026_06_21_000005_create_project_resources_table.php tests/Feature/Worker/ResourceIndexTest.php tests/Feature/Worker/ResourceShowTest.php tests/Feature/Resources/ResourcesManageTest.php)",
+      "Bash(php -r \"json_decode\\(file_get_contents\\('lang/ko.json'\\), true, 512, JSON_THROW_ON_ERROR\\); echo 'ko.json valid'.PHP_EOL;\")",
+      "Bash(vendor/bin/pint app/Exports/ShareholderExporter.php app/Http/Controllers/ProjectShareholderExportController.php app/Imports/ShareholderImporter.php)",
+      "Bash(vendor/bin/pint tests/Feature/Shareholders/ProjectShareholderExportTest.php app/Exports/ShareholderExporter.php)"
     ]
   }
 }

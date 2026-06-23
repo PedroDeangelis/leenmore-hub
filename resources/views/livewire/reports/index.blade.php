@@ -10,7 +10,7 @@
         <p class="mt-1 text-sm text-zinc-500">{{ __('Projects with activity reports') }}</p>
     </div>
 
-    <x-project.card class="p-4 max-w-170 mx-auto mb-6">
+    <x-ui.card class="p-4 max-w-170 mx-auto mb-6">
         <div class="relative">
             <input type="search" wire:model.live.debounce.300ms="search" placeholder="{{ __('Search...') }}"
                 aria-label="{{ __('Search projects') }}"
@@ -18,7 +18,7 @@
             <x-heroicon-o-magnifying-glass
                 class="pointer-events-none absolute inset-e-4 top-1/2 size-4.25 -translate-y-1/2 text-[#aeb4be]" />
         </div>
-    </x-project.card>
+    </x-ui.card>
 
 
     {{-- Project cards --}}

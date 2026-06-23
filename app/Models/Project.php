@@ -77,6 +77,17 @@ class Project extends Model
     }
 
     /**
+     * The project's resource room (프로젝트 자료실) — links and uploaded files in
+     * display order.
+     *
+     * @return HasMany<ProjectResource, $this>
+     */
+    public function resources(): HasMany
+    {
+        return $this->hasMany(ProjectResource::class)->orderBy('sort_order')->orderBy('id');
+    }
+
+    /**
      * Live countdown to the shareholder meeting (the end date), or null when
      * no end date is set.
      */

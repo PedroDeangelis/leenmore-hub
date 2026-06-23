@@ -18,7 +18,7 @@
         <div>
 
             {{-- Profile details --}}
-            <div class="card-wrapper">
+            <x-ui.card class="p-6">
                 <x-ui.card-heading icon="heroicon-o-user">
                     <h2 class="flex items-center gap-2 text-base font-semibold text-zinc-700">
                         {{ $name }}
@@ -81,12 +81,12 @@
                         </x-ui.button>
                     </div>
                 </form>
-            </div>
+            </x-ui.card>
         </div>
 
         {{-- Change password --}}
         <div>
-            <div class="card-wrapper mb-7">
+            <x-ui.card class="p-6 mb-7">
                 <x-ui.card-heading icon="heroicon-o-lock-closed" :heading="__('Change password')" :subheading="__('Set a new password for this user.')" />
 
                 <form wire:submit="updatePassword" class="space-y-6">
@@ -101,11 +101,11 @@
                         </x-ui.button>
                     </div>
                 </form>
-            </div>
+            </x-ui.card>
 
             {{-- Activation --}}
             @unless ($this->isSelf)
-                <div class="card-wrapper">
+                <x-ui.card class="p-6">
                     <x-ui.card-heading icon="heroicon-o-exclamation-circle" :heading="$user->deactivated_at ? __('Reactivate account') : __('Deactivate account')" :subheading="$user->deactivated_at
                         ? __('Restore this user\'s access to the application.')
                         : __('Prevent this user from signing in. You can reactivate them at any time.')" />
@@ -123,7 +123,7 @@
                             </x-ui.button>
                         @endif
                     </div>
-                </div>
+                </x-ui.card>
             @endunless
         </div>
     </div>

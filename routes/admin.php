@@ -1,15 +1,21 @@
 <?php
 
+use App\Http\Controllers\ProjectShareholderExportController;
 use App\Http\Controllers\ReportFileController;
 use App\Http\Controllers\ShareholderTemplateController;
 use App\Livewire\Activity\Index as ActivityIndex;
 use App\Livewire\Activity\Report as ActivityReport;
 use App\Livewire\Activity\Roster as ActivityRoster;
+use App\Livewire\Admin\Options as AdminOptions;
 use App\Livewire\Projects\Create as ProjectsCreate;
 use App\Livewire\Projects\Index as ProjectsIndex;
 use App\Livewire\Projects\Show as ProjectsShow;
+use App\Livewire\Receipts\Edit as ReceiptsEdit;
+use App\Livewire\Receipts\Index as ReceiptsIndex;
 use App\Livewire\Reports\Index as ReportsIndex;
 use App\Livewire\Reports\Show as ReportsShow;
+use App\Livewire\Resources\Index as ResourcesIndex;
+use App\Livewire\Resources\Manage as ResourcesManage;
 use App\Livewire\Users\Index as UsersIndex;
 use App\Livewire\Users\Show as UsersShow;
 use Illuminate\Support\Facades\Route;
@@ -49,6 +55,12 @@ Route::middleware(['auth', 'role:admin,office'])->prefix('dashboard')->group(fun
         ->middleware('can:manage-shareholders')
         ->name('shareholders.template');
 
+    // Export a project's current roster as a re-importable CSV.
+    Route::get('projects/{project}/shareholders/export', ProjectShareholderExportController::class)
+        ->whereNumber('project')
+        ->middleware('can:manage-shareholders')
+        ->name('projects.shareholders.export');
+
     // Reports archive: admin + office may read activity reports. The file route
     // is declared before `reports/{project}` so it is not captured as a project.
     Route::livewire('reports', ReportsIndex::class)
@@ -81,4 +93,27 @@ Route::middleware(['auth', 'role:admin,office'])->prefix('dashboard')->group(fun
         ->whereNumber('projectShareholder')
         ->middleware('can:edit-submissions')
         ->name('activity.report');
+
+    // Receipts archive: admin + office may read worker-submitted receipts.
+    Route::livewire('receipts', ReceiptsIndex::class)
+        ->middleware('can:view-receipts')
+        ->name('receipts.index');
+
+    Route::livewire('receipts/{receipt}/edit', ReceiptsEdit::class)
+        ->middleware('can:manage-receipts')
+        ->name('receipts.edit');
+
+    // Project resources (프로젝트 자료실): list all projects, then manage one's links/files.
+    Route::livewire('resources', ResourcesIndex::class)
+        ->middleware('can:manage-resources')
+        ->name('resources.index');
+
+    Route::livewire('resources/{project}', ResourcesManage::class)
+        ->middleware('can:manage-resources')
+        ->name('resources.manage');
+
+    // Options: admin-only app-wide settings (announcement, receipt categories).
+    Route::livewire('options', AdminOptions::class)
+        ->middleware('can:manage-settings')
+        ->name('options.edit');
 });

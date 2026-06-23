@@ -174,6 +174,16 @@ class ShareholderImporter
     }
 
     /**
+     * The field keys, in column order — the shared layout for import + export.
+     *
+     * @return array<int, string>
+     */
+    public static function fields(): array
+    {
+        return array_keys(self::COLUMNS);
+    }
+
+    /**
      * The expected column headers, in order — for the downloadable template.
      *
      * @return array<int, string>

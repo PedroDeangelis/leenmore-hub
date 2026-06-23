@@ -1,10 +1,3 @@
-@php
-    // Shared 7-column grid for the header, summary, and every data row.
-    $grid =
-        'display:grid;grid-template-columns:minmax(150px,1.5fr) 0.9fr 1.1fr 0.9fr 1.15fr 1.7fr 1.3fr;align-items:center;gap:12px;';
-    $thClass = 'text-[11px] font-semibold tracking-wide text-[#8b919c]';
-@endphp
-
 <div class="" x-data>
 
 
@@ -14,7 +7,7 @@
     </div>
 
     {{-- Filter / sort panel --}}
-    <x-project.card class="p-4 space-y-2 max-w-300 mx-auto mb-10">
+    <x-ui.card class="p-4 space-y-2 max-w-300 mx-auto mb-10">
 
         <div class="flex items-center gap-3">
             <div
@@ -93,139 +86,141 @@
             <x-heroicon-o-magnifying-glass
                 class="pointer-events-none absolute end-4 top-1/2 size-[17px] -translate-y-1/2 text-[#aeb4be]" />
         </div>
-    </x-project.card>
+    </x-ui.card>
 
     <div class="">
 
 
 
         {{-- Table --}}
-        <div class="overflow-hidden rounded-2xl border border-[#e8eaef] bg-white">
-            {{-- header --}}
-            <div class="border-b border-[#e8eaef] bg-[#fafbfc] px-[22px] py-[13px]" style="{{ $grid }}">
-                <span class="{{ $thClass }}">{{ __('Shareholder') }}</span>
-                <span class="{{ $thClass }}">{{ __('Shares') }}</span>
-                <span class="{{ $thClass }}">{{ __('Total shares') }}</span>
-                <span class="{{ $thClass }}">{{ __('Activist') }}</span>
-                <span class="{{ $thClass }}">{{ __('Submitted') }}</span>
-                <span class="{{ $thClass }}">{{ __('Project') }}</span>
-                <span class="{{ $thClass }} text-end">{{ __('Result') }}</span>
-            </div>
+        <x-ui.table>
+            <x-slot:head>
+                <x-ui.table.heading>{{ __('Shareholder') }}</x-ui.table.heading>
+                <x-ui.table.heading>{{ __('Shares') }}</x-ui.table.heading>
+                <x-ui.table.heading>{{ __('Total shares') }}</x-ui.table.heading>
+                <x-ui.table.heading>{{ __('Activist') }}</x-ui.table.heading>
+                <x-ui.table.heading>{{ __('Submitted') }}</x-ui.table.heading>
+                <x-ui.table.heading>{{ __('Project') }}</x-ui.table.heading>
+                <x-ui.table.heading align="end">{{ __('Result') }}</x-ui.table.heading>
+            </x-slot:head>
 
             @if (count($rows) > 0)
                 {{-- summary --}}
-                <div class="border-b border-[#f1f2f5] bg-[#fbfcfd] px-[22px] py-3.5" style="{{ $grid }}">
-                    <span
-                        class="text-[14px] font-bold tabular-nums text-[#171a1f]">{{ number_format($summary['count']) }}</span>
-                    <span
-                        class="text-[13.5px] font-bold tabular-nums text-[#171a1f]">{{ number_format($summary['shares']) }}</span>
-                    <span
-                        class="text-[13.5px] font-bold tabular-nums text-[#171a1f]">{{ number_format($summary['total']) }}</span>
-                    <span></span><span></span><span></span><span></span>
-                </div>
+                <tr class="bg-zinc-50 font-semibold text-zinc-800">
+                    <x-ui.table.cell
+                        class="font-bold tabular-nums">{{ number_format($summary['count']) }}</x-ui.table.cell>
+                    <x-ui.table.cell
+                        class="font-bold tabular-nums">{{ number_format($summary['shares']) }}</x-ui.table.cell>
+                    <x-ui.table.cell
+                        class="font-bold tabular-nums">{{ number_format($summary['total']) }}</x-ui.table.cell>
+                    <td></td>
+                    <td></td>
+                    <td></td>
+                    <td></td>
+                </tr>
 
                 @foreach ($rows as $row)
-                    <div wire:key="report-row-{{ $row['id'] }}">
-                        {{-- row --}}
-                        <div wire:click="toggle({{ $row['id'] }})"
-                            class="cursor-pointer border-b border-[#f1f2f5] px-[22px] py-[15px] transition hover:bg-[#fafbfc]"
-                            style="{{ $grid }}">
-                            <span class="flex flex-wrap items-baseline gap-1.5">
-                                <span class="text-[14px] font-bold text-[#171a1f]">{{ $row['name'] }}</span>
+                    <tr wire:key="report-row-{{ $row['id'] }}" wire:click="toggle({{ $row['id'] }})"
+                        class="cursor-pointer hover:bg-zinc-50">
+                        <x-ui.table.cell>
+                            <div class="flex flex-wrap items-baseline gap-1.5">
+                                <span class="font-medium text-zinc-800">{{ $row['name'] }}</span>
                                 @if ($row['idNum'])
-                                    <span
-                                        class="text-[12.5px] font-medium tabular-nums text-[#8b919c]">{{ $row['idNum'] }}</span>
+                                    <span class="text-xs tabular-nums text-zinc-500">{{ $row['idNum'] }}</span>
                                 @endif
                                 @if ($row['gender'])
-                                    <span
-                                        class="text-[12.5px] font-semibold text-primary">({{ $row['gender'] }})</span>
+                                    <span class="text-xs font-semibold text-primary">({{ $row['gender'] }})</span>
                                 @endif
-                            </span>
-                            <span
-                                class="text-[13px] tabular-nums text-[#3d424b]">{{ $row['shares'] !== null ? number_format($row['shares']) : '—' }}</span>
-                            <span
-                                class="text-[13px] tabular-nums text-[#3d424b]">{{ $row['total'] !== null ? number_format($row['total']) : '—' }}</span>
-                            <span class="text-[13px] text-[#3d424b]">{{ $row['worker'] }}</span>
-                            <span
-                                class="text-[12.5px] tabular-nums text-[#5b616c]">{{ $row['submitDate']?->format('y/m/d H:i') ?? '—' }}</span>
-                            <span class="truncate text-[13px] text-[#5b616c]">{{ $project->title }}</span>
+                            </div>
+                        </x-ui.table.cell>
+                        <x-ui.table.cell
+                            class="tabular-nums text-zinc-600">{{ $row['shares'] !== null ? number_format($row['shares']) : '—' }}</x-ui.table.cell>
+                        <x-ui.table.cell
+                            class="tabular-nums text-zinc-600">{{ $row['total'] !== null ? number_format($row['total']) : '—' }}</x-ui.table.cell>
+                        <x-ui.table.cell class="text-zinc-600">{{ $row['worker'] }}</x-ui.table.cell>
+                        <x-ui.table.cell
+                            class="tabular-nums text-zinc-500">{{ $row['submitDate']?->format('y/m/d H:i') ?? '—' }}</x-ui.table.cell>
+                        <x-ui.table.cell class="text-zinc-600"><span
+                                class="block truncate">{{ $project->title }}</span></x-ui.table.cell>
+                        <x-ui.table.cell align="end">
                             <span class="flex items-center justify-end gap-2.5">
                                 <span
-                                    class="text-[11.5px] tabular-nums text-[#aeb4be]">{{ $row['judgeDate']?->format('y/m/d') ?? '' }}</span>
+                                    class="text-xs tabular-nums text-zinc-400">{{ $row['judgeDate']?->format('y/m/d') ?? '' }}</span>
                                 <span
-                                    class="inline-flex items-center whitespace-nowrap rounded-full px-3 py-1 text-[11.5px] font-semibold {{ $row['chip'] }}">{{ $row['judgment'] }}</span>
+                                    class="inline-flex items-center whitespace-nowrap rounded-full px-3 py-1 text-xs font-semibold {{ $row['chip'] }}">{{ $row['judgment'] }}</span>
                             </span>
-                        </div>
+                        </x-ui.table.cell>
+                    </tr>
 
-                        {{-- expandable detail --}}
-                        @if ($row['isOpen'])
-                            <div
-                                class="grid grid-cols-1 gap-7 border-b border-[#f1f2f5] bg-[#fafbfc] px-[26px] pb-6 pt-5 md:grid-cols-2">
-                                <div class="flex flex-col gap-[11px]">
-                                    <div class="flex gap-2.5"><span
-                                            class="w-[84px] flex-none text-[12px] font-semibold text-[#8b919c]">{{ __('Created') }}</span><span
-                                            class="tabular-nums text-[13px] text-[#3d424b]">{{ $row['detail']['created']?->format('Y-m-d H:i') ?? '—' }}</span>
+                    {{-- expandable detail --}}
+                    @if ($row['isOpen'])
+                        <tr wire:key="report-detail-{{ $row['id'] }}">
+                            <td colspan="7" class="p-0">
+                                <div class="grid grid-cols-1 gap-7 bg-zinc-50 px-6 pb-6 pt-5 md:grid-cols-2">
+                                    <div class="flex flex-col gap-3 text-sm">
+                                        <div class="flex gap-2.5"><span
+                                                class="w-21 flex-none text-xs font-semibold text-zinc-500">{{ __('Created') }}</span><span
+                                                class="tabular-nums text-zinc-700">{{ $row['detail']['created']?->format('Y-m-d H:i') ?? '—' }}</span>
+                                        </div>
+                                        <div class="flex gap-2.5"><span
+                                                class="w-21 flex-none text-xs font-semibold text-zinc-500">{{ __('Activity date') }}</span><span
+                                                class="tabular-nums text-zinc-700">{{ $row['detail']['actDate']?->format('Y-m-d') ?? '—' }}</span>
+                                        </div>
+                                        <div class="flex gap-2.5"><span
+                                                class="w-21 flex-none text-xs font-semibold text-zinc-500">{{ __('Address') }}</span><span
+                                                class="leading-relaxed text-zinc-700"
+                                                style="text-wrap:pretty;">{{ $row['detail']['address'] }}</span></div>
+                                        <div class="flex gap-2.5"><span
+                                                class="w-21 flex-none text-xs font-semibold text-zinc-500">{{ __('Contact information') }}</span><span
+                                                class="tabular-nums text-zinc-700">{{ $row['detail']['contact'] }}</span>
+                                        </div>
                                     </div>
-                                    <div class="flex gap-2.5"><span
-                                            class="w-[84px] flex-none text-[12px] font-semibold text-[#8b919c]">{{ __('Activity date') }}</span><span
-                                            class="tabular-nums text-[13px] text-[#3d424b]">{{ $row['detail']['actDate']?->format('Y-m-d') ?? '—' }}</span>
-                                    </div>
-                                    <div class="flex gap-2.5"><span
-                                            class="w-[84px] flex-none text-[12px] font-semibold text-[#8b919c]">{{ __('Address') }}</span><span
-                                            class="text-[13px] leading-relaxed text-[#3d424b]"
-                                            style="text-wrap:pretty;">{{ $row['detail']['address'] }}</span></div>
-                                    <div class="flex gap-2.5"><span
-                                            class="w-[84px] flex-none text-[12px] font-semibold text-[#8b919c]">{{ __('Contact information') }}</span><span
-                                            class="tabular-nums text-[13px] text-[#3d424b]">{{ $row['detail']['contact'] }}</span>
+                                    <div class="flex flex-col gap-3.5">
+                                        <div>
+                                            <div class="mb-2 text-xs font-semibold tracking-wide text-zinc-500">
+                                                {{ __('Files') }}</div>
+                                            @forelse ($row['detail']['files'] as $file)
+                                                <div
+                                                    class="mb-2 flex items-center justify-between gap-3 rounded-[10px] border border-zinc-200 bg-white px-3 py-2.5">
+                                                    <span
+                                                        class="flex min-w-0 items-center gap-2.5 text-sm font-medium text-zinc-700">
+                                                        <x-heroicon-o-document class="size-4 flex-none text-zinc-400" />
+                                                        <span class="truncate">{{ $file['name'] }}</span>
+                                                    </span>
+                                                    <span class="flex flex-none gap-1.5">
+                                                        <a href="{{ route('reports.file', ['submission' => $row['id'], 'index' => $file['index'], 'preview' => 1]) }}"
+                                                            target="_blank" rel="noopener"
+                                                            class="rounded-[7px] border border-zinc-200 bg-white px-3 py-1.5 text-xs font-semibold text-zinc-700 transition hover:bg-zinc-50">{{ __('Preview') }}</a>
+                                                        <a href="{{ route('reports.file', ['submission' => $row['id'], 'index' => $file['index']]) }}"
+                                                            class="rounded-[7px] bg-primary px-3 py-1.5 text-xs font-semibold text-white transition hover:bg-primary-light">{{ __('Download') }}</a>
+                                                    </span>
+                                                </div>
+                                            @empty
+                                                <div
+                                                    class="rounded-[10px] border border-dashed border-zinc-200 px-3 py-2.5 text-xs text-zinc-400">
+                                                    {{ __('No files') }}</div>
+                                            @endforelse
+                                        </div>
+                                        <div>
+                                            <div class="mb-2 text-xs font-semibold tracking-wide text-zinc-500">
+                                                {{ __('Notes') }}</div>
+                                            <div class="text-sm leading-relaxed text-zinc-700"
+                                                style="text-wrap:pretty;">{{ $row['detail']['note'] }}</div>
+                                        </div>
                                     </div>
                                 </div>
-                                <div class="flex flex-col gap-3.5">
-                                    <div>
-                                        <div class="mb-2 text-[11px] font-semibold tracking-wide text-[#8b919c]">
-                                            {{ __('Files') }}</div>
-                                        @forelse ($row['detail']['files'] as $file)
-                                            <div
-                                                class="mb-2 flex items-center justify-between gap-3 rounded-[10px] border border-[#e6e8ed] bg-white px-3 py-2.5">
-                                                <span
-                                                    class="flex min-w-0 items-center gap-2.5 text-[13px] font-medium text-[#3d424b]">
-                                                    <x-heroicon-o-document
-                                                        class="size-[15px] flex-none text-[#9aa0aa]" />
-                                                    <span class="truncate">{{ $file['name'] }}</span>
-                                                </span>
-                                                <span class="flex flex-none gap-1.5">
-                                                    <a href="{{ route('reports.file', ['submission' => $row['id'], 'index' => $file['index'], 'preview' => 1]) }}"
-                                                        target="_blank" rel="noopener"
-                                                        class="rounded-[7px] border border-[#e0e3e9] bg-white px-3 py-1.5 text-[12px] font-semibold text-[#3d424b] transition hover:bg-[#fafbfc]">{{ __('Preview') }}</a>
-                                                    <a href="{{ route('reports.file', ['submission' => $row['id'], 'index' => $file['index']]) }}"
-                                                        class="rounded-[7px] bg-primary px-3 py-1.5 text-[12px] font-semibold text-white transition hover:bg-primary-light">{{ __('Download') }}</a>
-                                                </span>
-                                            </div>
-                                        @empty
-                                            <div
-                                                class="rounded-[10px] border border-dashed border-[#e6e8ed] px-3 py-2.5 text-[12.5px] text-[#aeb4be]">
-                                                {{ __('No files') }}</div>
-                                        @endforelse
-                                    </div>
-                                    <div>
-                                        <div class="mb-2 text-[11px] font-semibold tracking-wide text-[#8b919c]">
-                                            {{ __('Notes') }}</div>
-                                        <div class="text-[13.5px] leading-relaxed text-[#3d424b]"
-                                            style="text-wrap:pretty;">{{ $row['detail']['note'] }}</div>
-                                    </div>
-                                </div>
-                            </div>
-                        @endif
-                    </div>
+                            </td>
+                        </tr>
+                    @endif
                 @endforeach
             @else
-                <div class="px-5 py-16 text-center text-sm font-medium text-[#aeb4be]">
-                    {{ __('No reports for this project yet.') }}</div>
+                <x-ui.table.empty :cols="7">{{ __('No reports for this project yet.') }}</x-ui.table.empty>
             @endif
-        </div>
+        </x-ui.table>
 
         {{-- scroll to top --}}
         <button type="button" x-on:click="window.scrollTo({ top: 0, behavior: 'smooth' })"
-            class="fixed bottom-8 end-8 flex size-[46px] items-center justify-center rounded-full bg-primary text-white shadow-[0_8px_20px_rgba(20,23,28,0.25)] transition hover:bg-primary-light"
+            class="fixed bottom-8 inset-e-8 flex size-11.5 items-center justify-center rounded-full bg-primary text-white shadow-[0_8px_20px_rgba(20,23,28,0.25)] transition hover:bg-primary-light"
             aria-label="{{ __('Scroll to top') }}">
             <x-heroicon-o-chevron-up class="size-5" />
         </button>

@@ -178,7 +178,7 @@
         <div class="flex flex-wrap items-start gap-3.5">
 
             {{-- 판단 결과 현황 (share sums per current 판단, grouped into colour bands) --}}
-            <x-project.card class="min-w-[580px] flex-[1.75]">
+            <x-ui.card class="min-w-[580px] flex-[1.75]">
                 <div class="flex items-center justify-between border-b border-zinc-100 px-4 py-3">
                     <div class="flex items-center gap-2.5">
                         <span class="text-sm font-bold text-zinc-900">{{ __('Judgment results') }}</span>
@@ -267,10 +267,10 @@
                         <p class="text-xs text-zinc-400">{{ __('Judgment breakdowns will appear here once worker submissions are tallied.') }}</p>
                     </div>
                 @endif
-            </x-project.card>
+            </x-ui.card>
 
             {{-- 판단 (the project's result definitions) --}}
-            <x-project.card class="w-[430px] flex-none">
+            <x-ui.card class="w-[430px] flex-none">
                 <div class="flex items-center justify-between border-b border-zinc-100 px-4 py-3">
                     <span class="text-sm font-bold text-zinc-900">{{ __('Judgment') }}</span>
                     @can('manage-projects')
@@ -335,11 +335,11 @@
                         </tbody>
                     </table>
                 </div>
-            </x-project.card>
+            </x-ui.card>
         </div>
 
         {{-- 주주 (shareholders roster) --}}
-        <x-project.card>
+        <x-ui.card>
             <div class="flex flex-wrap items-center justify-between gap-4 border-b border-zinc-100 px-4 py-3.5">
                 <div class="flex flex-wrap items-center gap-3">
                     <div class="flex items-center gap-2">
@@ -361,7 +361,15 @@
                     @endif
                 </div>
                 @can('manage-shareholders')
-                    <livewire:projects.shareholder-import :project="$project" :key="'sh-import-'.$project->id" />
+                    <div class="flex items-center gap-2">
+                        @if ($shareholderCount > 0)
+                            <a href="{{ route('projects.shareholders.export', $project) }}"
+                                class="inline-flex items-center gap-1.5 rounded-lg border border-zinc-200 bg-white px-4 py-2 text-[13px] font-semibold text-zinc-700 transition hover:bg-zinc-50">
+                                <x-heroicon-o-arrow-down-tray class="size-4 text-zinc-400" />{{ __('Download CSV') }}
+                            </a>
+                        @endif
+                        <livewire:projects.shareholder-import :project="$project" :key="'sh-import-'.$project->id" />
+                    </div>
                 @endcan
             </div>
 
@@ -432,7 +440,7 @@
                     <p class="text-xs text-zinc-400">{{ __('Shareholders will appear here once a list is added.') }}</p>
                 </div>
             @endif
-        </x-project.card>
+        </x-ui.card>
     </div>
 
     {{-- Manage results modal --}}
