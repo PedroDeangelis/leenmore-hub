@@ -88,6 +88,18 @@ class Project extends Model
     }
 
     /**
+     * Completed ESIGNON (전자위임) documents pulled for this project by the
+     * `esignon:sync` command — matched signers (`needs_sync = false`) and the
+     * unmatched "주주명부 누락" (`needs_sync = true`).
+     *
+     * @return HasMany<EsignonShareholder, $this>
+     */
+    public function esignonShareholders(): HasMany
+    {
+        return $this->hasMany(EsignonShareholder::class);
+    }
+
+    /**
      * Live countdown to the shareholder meeting (the end date), or null when
      * no end date is set.
      */

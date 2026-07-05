@@ -2,13 +2,13 @@
     {{-- Brand header --}}
     <header class="sticky top-0 z-20 bg-primary px-5 pb-5 pt-6 text-white">
         <div class="max-w-md mx-auto">
-            <p class="text-[11px] font-semibold uppercase tracking-[0.18em] text-white/60">{{ config('app.name') }}</p>
+            <p class="text-sm font-semibold uppercase tracking-[0.18em] text-white/60">{{ config('app.name') }}</p>
             <h1 class="mt-1 text-[22px] font-bold tracking-tight">{{ __('Your projects') }}</h1>
-            <p class="mt-1 text-[13px] text-white/70">{{ __('Hello, :name', ['name' => auth()->user()->name]) }}</p>
+            <p class="mt-1 text-sm text-white/70">{{ __('Hello, :name', ['name' => auth()->user()->name]) }}</p>
         </div>
     </header>
 
-    <div class="space-y-3 py-4 max-w-md mx-auto">
+    <div class="space-y-3 py-4 max-w-md mx-auto px-2">
         @forelse ($projects as $project)
             @php($countdown = $project->meetingCountdown())
             <a href="{{ route('worker.projects.show', $project) }}" wire:navigate wire:key="wp-{{ $project->id }}"

@@ -25,7 +25,7 @@
         </div>
         <div class="relative w-[200px]">
             <select wire:model.live="reports" aria-label="{{ __('Filter by reports') }}"
-                class="w-full appearance-none rounded-[10px] border border-[#e6e8ed] bg-white py-3 pe-9 ps-4 text-[13px] font-semibold text-[#3d424b] outline-none focus:border-primary">
+                class="w-full appearance-none rounded-[10px] border border-[#e6e8ed] bg-white py-3 pe-9 ps-4 text-sm font-semibold text-[#3d424b] outline-none focus:border-primary">
                 <option value="">{{ __('All shareholders') }}</option>
                 <option value="has">{{ __('Has reports') }}</option>
                 <option value="none">{{ __('No reports') }}</option>
@@ -59,8 +59,10 @@
                                 class="text-xs tabular-nums text-zinc-500">{{ $row->shareholder?->date_of_birth_code ?: $row->shareholder?->registration }}</span>
                         </div>
                     </x-ui.table.cell>
-                    <x-ui.table.cell align="end" class="tabular-nums text-zinc-600">{{ $row->shares !== null ? number_format($row->shares) : '—' }}</x-ui.table.cell>
-                    <x-ui.table.cell align="end" class="tabular-nums text-zinc-600">{{ $row->shares_total !== null ? number_format($row->shares_total) : '—' }}</x-ui.table.cell>
+                    <x-ui.table.cell align="end"
+                        class="tabular-nums text-zinc-600">{{ $row->shares !== null ? number_format($row->shares) : '—' }}</x-ui.table.cell>
+                    <x-ui.table.cell align="end"
+                        class="tabular-nums text-zinc-600">{{ $row->shares_total !== null ? number_format($row->shares_total) : '—' }}</x-ui.table.cell>
                     <x-ui.table.cell>
                         @if ($row->result)
                             <x-result.chip :color="$row->result->color" :label="$row->result->name" />
@@ -68,7 +70,8 @@
                             <span class="text-zinc-400">{{ __('Not yet entered') }}</span>
                         @endif
                     </x-ui.table.cell>
-                    <x-ui.table.cell align="end" class="tabular-nums {{ $row->submissions_count > 0 ? 'font-medium text-zinc-700' : 'text-zinc-400' }}">{{ number_format($row->submissions_count) }}</x-ui.table.cell>
+                    <x-ui.table.cell align="end"
+                        class="tabular-nums {{ $row->submissions_count > 0 ? 'font-medium text-zinc-700' : 'text-zinc-400' }}">{{ number_format($row->submissions_count) }}</x-ui.table.cell>
                     <x-ui.table.cell align="end">
                         <a href="{{ route('activity.report', [$project, $row]) }}" wire:navigate
                             class="text-primary hover:underline">{{ __('View') }}</a>

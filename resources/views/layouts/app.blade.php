@@ -119,10 +119,6 @@
 
                 <div x-show="menuOpen" x-cloak x-on:click.outside="menuOpen = false"
                     class="absolute bottom-full start-0 z-10 mb-2 w-full rounded-lg border border-zinc-200 bg-white py-1 shadow-lg">
-                    <a href="{{ route('profile.edit') }}" wire:navigate
-                        class="block px-4 py-2 text-sm text-zinc-700 hover:bg-zinc-50">
-                        {{ __('Settings') }}
-                    </a>
                     <form method="POST" action="{{ route('logout') }}">
                         @csrf
                         <button type="submit"

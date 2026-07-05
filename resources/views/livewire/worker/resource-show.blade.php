@@ -9,7 +9,7 @@
                     <x-heroicon-o-arrow-left class="size-5" />
                 </a>
                 <div class="min-w-0">
-                    <p class="text-[11px] font-semibold uppercase tracking-[0.14em] text-white/60">
+                    <p class="text-sm font-semibold uppercase tracking-[0.14em] text-white/60">
                         {{ __('Project resources') }}</p>
                     <h1 class="truncate text-[19px] font-bold tracking-tight">{{ $project->title }}</h1>
                 </div>
@@ -24,7 +24,7 @@
         </div>
     </header>
 
-    <div class="space-y-2.5 py-4 max-w-md mx-auto">
+    <div class="space-y-2.5 py-4 max-w-md mx-auto px-2">
         @forelse ($resources as $resource)
             <div wire:key="res-{{ $resource->id }}"
                 class="flex items-center gap-3 rounded-2xl border border-zinc-200 bg-white p-4 shadow-sm">

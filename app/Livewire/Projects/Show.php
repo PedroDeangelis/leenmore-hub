@@ -4,10 +4,12 @@ namespace App\Livewire\Projects;
 
 use App\Enums\ResultColor;
 use App\Enums\UserRole;
+use App\Models\EsignonShareholder;
 use App\Models\Project;
 use App\Models\ProjectResult;
 use App\Models\ProjectShareholder;
 use App\Models\User;
+use App\Support\JudgmentTally;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Support\Collection;
@@ -386,71 +388,49 @@ class Show extends Component
             'project' => $project,
             'countdown' => $project->meetingCountdown(),
             // The 판단 결과 현황 tally: share sums per current 판단 (result_id),
-            // grouped by colour, measured against the target.
-            'tally' => $this->resultTally($project),
+            // grouped by colour, measured against the target. Shared with the
+            // judgment-results Excel export.
+            'tally' => JudgmentTally::for($project),
             'shareholders' => $this->rosterQuery($project)->take(8)->get(),
             'matchCount' => $this->rosterQuery($project)->count(),
             'shareholderCount' => $project->shareholders()->count(),
             'shareholderSearching' => trim($this->shareholderSearch) !== '',
             'managingAssignment' => $this->managingAssignment($project),
             'workerOptions' => $this->workerOptions(),
+            'esignon' => $this->esignonSummary($project),
         ]);
     }
 
     /**
-     * The 판단 결과 현황 tally: the sum of project shares behind each current 판단
-     * (the shareholders' `result_id`), grouped into colour bands and measured
-     * against the target. Only judged 판단 with shares appear, mirroring the
-     * dashboard design. `hasData` is false when nothing has been judged yet.
+     * The ESIGNON (전자위임) signers pulled for this project: matched ones plus the
+     * unmatched "주주명부 누락", with the unmatched listed first so they stand out.
+     * Empty/disabled when the project has no ESIGNON link configured.
      *
-     * @return array{groups: array<int, array<string, mixed>>, hasData: bool}
+     * @return array{enabled: bool, signers: Collection<int, EsignonShareholder>, total: int, matched: int, missing: int}
      */
-    private function resultTally(Project $project): array
+    private function esignonSummary(Project $project): array
     {
-        $target = (int) ($project->shares_target ?? 0);
-
-        // Sum of project shares behind each current 판단 (judged rows only).
-        // reorder() drops the relationship's default `order by no`, which MySQL's
-        // only_full_group_by mode rejects alongside this GROUP BY.
-        $sums = $project->shareholders()
-            ->reorder()
-            ->whereNotNull('result_id')
-            ->groupBy('result_id')
-            ->selectRaw('result_id, COALESCE(SUM(shares), 0) as shares')
-            ->pluck('shares', 'result_id');
-
-        $groups = [];
-
-        foreach ($project->results as $result) {
-            $shares = (int) ($sums[$result->id] ?? 0);
-
-            if ($shares === 0) {
-                continue; // Only populated 판단 are listed.
-            }
-
-            $row = [
-                'name' => $result->name,
-                'color' => $result->color,
-                'shares' => $shares,
-                'percent' => $target > 0 ? $shares / $target * 100 : null,
-            ];
-
-            // Consecutive results sharing a colour merge into one total group.
-            $last = array_key_last($groups);
-
-            if ($last !== null && $groups[$last]['color'] === $result->color) {
-                $groups[$last]['rows'][] = $row;
-                $groups[$last]['totalShares'] += $shares;
-            } else {
-                $groups[] = ['color' => $result->color, 'rows' => [$row], 'totalShares' => $shares];
-            }
+        if (! filled($project->link_manage_id)) {
+            return ['enabled' => false, 'signers' => collect(), 'total' => 0, 'matched' => 0, 'missing' => 0];
         }
 
-        foreach ($groups as &$group) {
-            $group['totalPercent'] = $target > 0 ? $group['totalShares'] / $target * 100 : null;
-        }
+        $total = $project->esignonShareholders()->count();
+        $missing = $project->esignonShareholders()->where('needs_sync', true)->count();
 
-        return ['groups' => $groups, 'hasData' => $groups !== []];
+        // 누락 first (need attention), then most-recently signed.
+        $signers = $project->esignonShareholders()
+            ->orderByDesc('needs_sync')
+            ->orderByDesc('completed_date')
+            ->limit(100)
+            ->get();
+
+        return [
+            'enabled' => true,
+            'signers' => $signers,
+            'total' => $total,
+            'matched' => $total - $missing,
+            'missing' => $missing,
+        ];
     }
 
     /**

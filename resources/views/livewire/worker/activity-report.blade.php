@@ -12,11 +12,11 @@
                     <x-heroicon-o-arrow-left class="size-5" />
                 </a>
                 <div class="min-w-0 flex-1">
-                    <p class="text-[11px] font-semibold uppercase tracking-[0.14em] text-white/60">
+                    <p class="text-sm font-semibold uppercase tracking-[0.14em] text-white/60">
                         {{ __('Shareholders') }}</p>
                     <div class="mt-0.5 flex flex-wrap items-center gap-x-2 gap-y-1">
                         <h1 class="text-[19px] font-bold tracking-tight">{{ $shareholder->name }}</h1>
-                        <span class="text-[13px] font-semibold tabular-nums text-white/70">
+                        <span class="text-sm font-semibold tabular-nums text-white/70">
                             {{ $shareholder->date_of_birth_code ?? ($shareholder->registration ?? '—') }}</span>
                         @if ($shareholder->sex)
                             <span
@@ -28,20 +28,20 @@
         </div>
     </header>
 
-    <div class="space-y-3 py-4 max-w-md mx-auto">
+    <div class="space-y-3 py-4 max-w-md mx-auto px-2">
 
         {{-- Shareholder summary: shares, address, prior reports --}}
         <div class="rounded-2xl border border-zinc-200 bg-white p-4 shadow-sm">
             {{-- Shares --}}
-            <div class="flex gap-4 rounded-xl bg-zinc-50 px-3 py-2 text-[13px]">
+            <div class="flex gap-4 rounded-xl bg-zinc-50 px-3 py-2 text-sm">
                 <div class="flex-1">
-                    <div class="text-[11px] font-semibold text-zinc-400">{{ __('Shares') }}</div>
+                    <div class="text-sm font-semibold text-zinc-400">{{ __('Shares') }}</div>
                     <div class="font-bold tabular-nums text-zinc-800">
                         {{ $projectShareholder->shares !== null ? number_format($projectShareholder->shares) : '—' }}
                     </div>
                 </div>
                 <div class="flex-1 border-l border-zinc-200 pl-4">
-                    <div class="text-[11px] font-semibold text-zinc-400">{{ __('Total shares') }}</div>
+                    <div class="text-sm font-semibold text-zinc-400">{{ __('Total shares') }}</div>
                     <div class="font-bold tabular-nums text-zinc-800">
                         {{ $projectShareholder->shares_total !== null ? number_format($projectShareholder->shares_total) : '—' }}
                     </div>
@@ -51,14 +51,14 @@
             {{-- Address + field actions --}}
             @if ($address)
                 <div class="mt-3">
-                    <div class="flex gap-1.5 text-[13px] text-zinc-600">
+                    <div class="flex gap-1.5 text-sm text-zinc-600">
                         <x-heroicon-o-map-pin class="mt-0.5 size-4 shrink-0 text-zinc-400" />
                         <span>{{ $address }}</span>
                     </div>
                     <div class="mt-2.5 flex gap-2" x-data="{ copied: false }">
                         <button type="button"
                             x-on:click="navigator.clipboard.writeText(@js($address)); copied = true; setTimeout(() => copied = false, 1500)"
-                            class="inline-flex flex-1 items-center justify-center gap-1.5 rounded-lg border border-zinc-200 py-2 text-[13px] font-semibold text-zinc-700 transition hover:bg-zinc-50">
+                            class="inline-flex flex-1 items-center justify-center gap-1.5 rounded-lg border border-zinc-200 py-2 text-xs font-semibold text-zinc-700 transition hover:bg-zinc-50">
                             <template x-if="!copied">
                                 <span class="inline-flex items-center gap-1.5"><x-heroicon-o-clipboard-document
                                         class="size-4" />{{ __('Copy address') }}</span>
@@ -71,7 +71,7 @@
                         </button>
                         <a href="https://map.naver.com/v5/search/{{ urlencode($address) }}" target="_blank"
                             rel="noopener"
-                            class="inline-flex flex-1 items-center justify-center gap-1.5 rounded-lg bg-primary py-2 text-[13px] font-semibold text-white transition hover:bg-primary-light">
+                            class="inline-flex flex-1 items-center justify-center gap-1.5 rounded-lg bg-primary py-2 text-xs font-semibold text-white transition hover:bg-primary-light">
                             <x-heroicon-o-map class="size-4" />{{ __('View on Naver Map') }}
                         </a>
                     </div>
@@ -82,7 +82,7 @@
         {{-- Prior submissions for this shareholder --}}
         @if ($previousSubmissions->isNotEmpty())
             <div class="mt-4 mb-6">
-                <p class="mb-2 px-4 text-[11px] font-semibold uppercase tracking-wide text-zinc-400">
+                <p class="mb-2 px-4 text-sm font-semibold uppercase tracking-wide text-zinc-400">
                     {{ __('Previous reports') }}</p>
                 <div class="space-y-2.5">
                     @foreach ($previousSubmissions as $sub)

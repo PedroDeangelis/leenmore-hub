@@ -4,6 +4,7 @@ namespace Tests\Feature\Projects;
 
 use App\Enums\ProjectStatus;
 use App\Livewire\Projects\Show;
+use App\Models\EsignonShareholder;
 use App\Models\Project;
 use App\Models\ProjectShareholder;
 use App\Models\User;
@@ -46,6 +47,34 @@ class ProjectShowTest extends TestCase
         $this->actingAs($worker)
             ->get(route('projects.show', $project))
             ->assertRedirect(route('worker.dashboard'));
+    }
+
+    public function test_it_lists_esignon_signers_when_a_link_is_configured(): void
+    {
+        $admin = User::factory()->admin()->create();
+        $project = Project::factory()->create(['link_manage_id' => '5001']);
+
+        EsignonShareholder::factory()->for($project)->create(['name' => '서명완료자', 'needs_sync' => false]);
+        EsignonShareholder::factory()->for($project)->create(['name' => '미매칭서명자', 'needs_sync' => true]);
+
+        $this->actingAs($admin)
+            ->get(route('projects.show', $project))
+            ->assertOk()
+            ->assertSee('Electronic delegations')
+            ->assertSee('서명완료자')          // matched signer
+            ->assertSee('미매칭서명자')         // unmatched (주주명부 누락)
+            ->assertSee('Not on roster');
+    }
+
+    public function test_the_esignon_card_is_hidden_when_no_link_is_configured(): void
+    {
+        $admin = User::factory()->admin()->create();
+        $project = Project::factory()->create(['link_manage_id' => null]);
+
+        $this->actingAs($admin)
+            ->get(route('projects.show', $project))
+            ->assertOk()
+            ->assertDontSee('Electronic delegations');
     }
 
     public function test_admins_can_edit_the_title_inline(): void

@@ -33,7 +33,7 @@
                                 <span
                                     class="text-[18px] font-bold text-[#171a1f]">{{ $shareholder?->name ?? '—' }}</span>
                                 <span
-                                    class="text-[13px] font-medium tabular-nums text-[#8b919c]">{{ $shareholder?->date_of_birth_code ?: $shareholder?->registration }}</span>
+                                    class="text-sm font-medium tabular-nums text-[#8b919c]">{{ $shareholder?->date_of_birth_code ?: $shareholder?->registration }}</span>
                             </div>
                         </div>
                         @if ($shareholder?->sex)
@@ -83,7 +83,7 @@
                                                 class="inline-flex items-center rounded-full bg-zinc-100 px-2.5 py-1 text-[11.5px] font-semibold text-zinc-600">{{ $sub->result }}</span>
                                         @endif
                                         @if ($sub->user_name)
-                                            <span class="text-[13px] text-[#5b616c]">{{ $sub->user_name }}</span>
+                                            <span class="text-sm text-[#5b616c]">{{ $sub->user_name }}</span>
                                         @endif
                                         @if ($sub->created_by_user_id)
                                             <span
@@ -115,12 +115,12 @@
                                         {{ __('Contact information') }}: {{ $sub->contact }}</div>
                                 @endif
                                 @if ($sub->note)
-                                    <p class="mt-1.5 text-[13px] leading-relaxed text-[#3d424b]">{{ $sub->note }}
+                                    <p class="mt-1.5 text-sm leading-relaxed text-[#3d424b]">{{ $sub->note }}
                                     </p>
                                 @endif
                             </div>
                         @empty
-                            <div class="py-8 text-center text-[13px] text-[#aeb4be]">{{ __('No reports yet.') }}</div>
+                            <div class="py-8 text-center text-sm text-[#aeb4be]">{{ __('No reports yet.') }}</div>
                         @endforelse
                     </div>
                 </div>
@@ -160,7 +160,7 @@
                             {{-- Existing attachments (edit mode) --}}
                             @if (count($existingAttachments))
                                 <div class="space-y-1.5">
-                                    <div class="text-[11px] font-semibold uppercase tracking-wide text-[#8b919c]">
+                                    <div class="text-sm font-semibold uppercase tracking-wide text-[#8b919c]">
                                         {{ __('Attached files') }}</div>
                                     @foreach ($existingAttachments as $i => $path)
                                         <div wire:key="existing-{{ $i }}"

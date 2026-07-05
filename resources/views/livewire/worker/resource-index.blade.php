@@ -2,12 +2,12 @@
     {{-- Header --}}
     <header class="sticky top-0 z-20 bg-primary px-5 pb-5 pt-6 text-white">
         <div class="max-w-md mx-auto">
-            <p class="text-[11px] font-semibold uppercase tracking-[0.18em] text-white/60">{{ config('app.name') }}</p>
+            <p class="text-sm font-semibold uppercase tracking-[0.18em] text-white/60">{{ config('app.name') }}</p>
             <h1 class="mt-1 text-[22px] font-bold tracking-tight">{{ __('Project resources') }}</h1>
         </div>
     </header>
 
-    <div class="space-y-3 py-4 max-w-md mx-auto">
+    <div class="space-y-3 py-4 max-w-md mx-auto px-2">
         @forelse ($projects as $project)
             <a href="{{ route('worker.resources.show', $project) }}" wire:navigate wire:key="rp-{{ $project->id }}"
                 class="flex items-center gap-3 rounded-2xl border border-zinc-200 bg-white p-3.5 shadow-sm transition active:scale-[0.99]">

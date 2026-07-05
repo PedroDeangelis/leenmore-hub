@@ -1,5 +1,7 @@
 <?php
 
+use App\Http\Controllers\ProjectActivityLogExportController;
+use App\Http\Controllers\ProjectJudgmentResultsExportController;
 use App\Http\Controllers\ProjectShareholderExportController;
 use App\Http\Controllers\ReportFileController;
 use App\Http\Controllers\ShareholderTemplateController;
@@ -60,6 +62,18 @@ Route::middleware(['auth', 'role:admin,office'])->prefix('dashboard')->group(fun
         ->whereNumber('project')
         ->middleware('can:manage-shareholders')
         ->name('projects.shareholders.export');
+
+    // Export a project's activity log (per-day report history) as an Excel workbook.
+    Route::get('projects/{project}/activity-log/export', ProjectActivityLogExportController::class)
+        ->whereNumber('project')
+        ->middleware('can:export-data')
+        ->name('projects.activity-log.export');
+
+    // Export a project's 판단 결과 현황 (judgment results summary) as an Excel report.
+    Route::get('projects/{project}/judgment-results/export', ProjectJudgmentResultsExportController::class)
+        ->whereNumber('project')
+        ->middleware('can:export-data')
+        ->name('projects.judgment-results.export');
 
     // Reports archive: admin + office may read activity reports. The file route
     // is declared before `reports/{project}` so it is not captured as a project.

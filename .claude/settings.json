@@ -59,7 +59,15 @@
       "Bash(vendor/bin/pint app/Enums/ResourceType.php app/Models/ProjectResource.php app/Models/Project.php database/factories/ProjectResourceFactory.php app/Livewire/Worker/ResourceIndex.php app/Livewire/Worker/ResourceShow.php app/Livewire/Resources/Index.php app/Livewire/Resources/Manage.php app/Http/Controllers/ProjectResourceFileController.php routes/worker.php routes/admin.php routes/web.php database/migrations/2026_06_21_000005_create_project_resources_table.php tests/Feature/Worker/ResourceIndexTest.php tests/Feature/Worker/ResourceShowTest.php tests/Feature/Resources/ResourcesManageTest.php)",
       "Bash(php -r \"json_decode\\(file_get_contents\\('lang/ko.json'\\), true, 512, JSON_THROW_ON_ERROR\\); echo 'ko.json valid'.PHP_EOL;\")",
       "Bash(vendor/bin/pint app/Exports/ShareholderExporter.php app/Http/Controllers/ProjectShareholderExportController.php app/Imports/ShareholderImporter.php)",
-      "Bash(vendor/bin/pint tests/Feature/Shareholders/ProjectShareholderExportTest.php app/Exports/ShareholderExporter.php)"
+      "Bash(vendor/bin/pint tests/Feature/Shareholders/ProjectShareholderExportTest.php app/Exports/ShareholderExporter.php)",
+      "Bash(grep -nE '\\\\$table->|Schema::')",
+      "Bash(vendor/bin/pint app/Exports/ActivityLogExporter.php app/Http/Controllers/ProjectActivityLogExportController.php routes/admin.php tests/Feature/Projects/ActivityLogExportTest.php)",
+      "Bash(vendor/bin/pint --test app/Exports/ActivityLogExporter.php app/Http/Controllers/ProjectActivityLogExportController.php routes/admin.php tests/Feature/Projects/ActivityLogExportTest.php)",
+      "Bash(grep -nE '^ESIGNON_' .env)",
+      "Bash(grep -nE 'ESIGNON' .env .env.example)",
+      "Bash(tail -6 .env)",
+      "Bash(grep -iA1 esignon)",
+      "Bash(vendor/bin/pint app/Services/Esignon app/Console app/Models/EsignonShareholder.php app/Http/Controllers/ProjectActivityLogExportController.php database/migrations/2026_06_23_000001_create_esignon_shareholders_table.php database/factories/EsignonShareholderFactory.php config/services.php routes/console.php tests/Feature/Esignon tests/Feature/Projects/ActivityLogExportTest.php)"
     ]
   }
 }

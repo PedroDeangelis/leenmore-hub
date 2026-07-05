@@ -2,10 +2,8 @@
 
 namespace Tests\Feature;
 
-use App\Livewire\Settings\Profile;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
-use Livewire\Livewire;
 use Tests\TestCase;
 
 class LocaleTest extends TestCase
@@ -28,31 +26,5 @@ class LocaleTest extends TestCase
         $response = $this->actingAs($user)->get(route('worker.dashboard'));
 
         $response->assertOk()->assertSee('Your projects');
-    }
-
-    public function test_users_can_change_their_language_in_profile_settings(): void
-    {
-        $user = User::factory()->create(['locale' => 'ko']);
-
-        Livewire::actingAs($user)
-            ->test(Profile::class)
-            ->set('locale', 'en')
-            ->call('updateProfileInformation')
-            ->assertHasNoErrors();
-
-        $this->assertSame('en', $user->fresh()->locale);
-    }
-
-    public function test_invalid_languages_are_rejected(): void
-    {
-        $user = User::factory()->create(['locale' => 'ko']);
-
-        Livewire::actingAs($user)
-            ->test(Profile::class)
-            ->set('locale', 'fr')
-            ->call('updateProfileInformation')
-            ->assertHasErrors(['locale']);
-
-        $this->assertSame('ko', $user->fresh()->locale);
     }
 }

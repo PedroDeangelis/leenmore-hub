@@ -11,12 +11,12 @@
 
         <div class="flex items-center gap-3">
             <div
-                class="w-[120px] flex-none rounded-[9px] bg-[#eef0f4] py-[11px] text-center text-[13px] font-bold text-[#5b616c]">
+                class="w-[120px] flex-none rounded-[9px] bg-[#eef0f4] py-[11px] text-center text-sm font-bold text-[#5b616c]">
                 {{ __('Filter') }}</div>
             <div class="flex flex-1 flex-wrap gap-3">
                 <div class="relative min-w-[160px] flex-1">
                     <select wire:model.live="worker" aria-label="{{ __('Filter by activist') }}"
-                        class="w-full appearance-none rounded-[9px] border border-[#e6e8ed] py-2.5 pe-9 ps-3.5 text-[13px] font-semibold text-[#3d424b] outline-none focus:border-primary">
+                        class="w-full appearance-none rounded-[9px] border border-[#e6e8ed] py-2.5 pe-9 ps-3.5 text-sm font-semibold text-[#3d424b] outline-none focus:border-primary">
                         <option value="">{{ __('All activists') }}</option>
                         @foreach ($workers as $name)
                             <option value="{{ $name }}">{{ $name }}</option>
@@ -27,7 +27,7 @@
                 </div>
                 <div class="relative min-w-[160px] flex-1">
                     <select wire:model.live="result" aria-label="{{ __('Filter by result') }}"
-                        class="w-full appearance-none rounded-[9px] border border-[#e6e8ed] py-2.5 pe-9 ps-3.5 text-[13px] font-semibold text-[#3d424b] outline-none focus:border-primary">
+                        class="w-full appearance-none rounded-[9px] border border-[#e6e8ed] py-2.5 pe-9 ps-3.5 text-sm font-semibold text-[#3d424b] outline-none focus:border-primary">
                         <option value="">{{ __('All results') }}</option>
                         @foreach ($results as $result)
                             <option value="{{ $result->name }}">{{ $result->name }}</option>
@@ -41,11 +41,11 @@
         {{-- sort --}}
         <div class="flex items-center gap-3">
             <div
-                class="w-[120px] flex-none rounded-[9px] bg-[#eef0f4] py-[11px] text-center text-[13px] font-bold text-[#5b616c]">
+                class="w-[120px] flex-none rounded-[9px] bg-[#eef0f4] py-[11px] text-center text-sm font-bold text-[#5b616c]">
                 {{ __('Sort') }}</div>
             <div class="flex flex-1 flex-wrap gap-3">
                 <button type="button" wire:click="sortBy('shares')"
-                    class="flex min-w-[160px] flex-1 cursor-pointer items-center justify-between rounded-[9px] border border-[#e6e8ed] px-3.5 py-2.5 text-[13px] font-semibold text-[#3d424b]">
+                    class="flex min-w-[160px] flex-1 cursor-pointer items-center justify-between rounded-[9px] border border-[#e6e8ed] px-3.5 py-2.5 text-xs font-semibold text-[#3d424b]">
                     <span>{{ __('Total shares') }}</span>
                     @if ($sort === 'shares')
                         @if ($direction === 'asc')
@@ -58,7 +58,7 @@
                     @endif
                 </button>
                 <button type="button" wire:click="sortBy('date')"
-                    class="flex min-w-[160px] flex-1 cursor-pointer items-center justify-between rounded-[9px] border border-[#e6e8ed] px-3.5 py-2.5 text-[13px] font-semibold text-[#3d424b]">
+                    class="flex min-w-[160px] flex-1 cursor-pointer items-center justify-between rounded-[9px] border border-[#e6e8ed] px-3.5 py-2.5 text-xs font-semibold text-[#3d424b]">
                     <span>{{ __('Submitted') }}</span>
                     @if ($sort === 'date')
                         @if ($direction === 'asc')
@@ -71,7 +71,7 @@
                     @endif
                 </button>
                 <label
-                    class="flex min-w-[160px] flex-1 cursor-pointer items-center gap-2.5 rounded-[9px] border border-[#e6e8ed] px-3.5 py-2.5 text-[13px] font-semibold text-[#3d424b]">
+                    class="flex min-w-[160px] flex-1 cursor-pointer items-center gap-2.5 rounded-[9px] border border-[#e6e8ed] px-3.5 py-2.5 text-xs font-semibold text-[#3d424b]">
                     <input type="checkbox" wire:model.live="latestOnly"
                         class="size-[17px] rounded-[5px] border-[1.5px] border-[#cdd2da] accent-primary focus:ring-2 focus:ring-primary/30" />
                     {{ __('Latest activity per shareholder only') }}

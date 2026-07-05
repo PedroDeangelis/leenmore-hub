@@ -6,7 +6,7 @@
         </div>
     </header>
 
-    <div class="space-y-2.5 py-4 max-w-md mx-auto">
+    <div class="space-y-2.5 py-4 max-w-md mx-auto px-2">
         @forelse ($receipts as $receipt)
             <div wire:key="receipt-{{ $receipt->id }}" class="rounded-2xl border border-zinc-200 bg-white p-4 shadow-sm">
                 <div class="flex items-center justify-between gap-2">

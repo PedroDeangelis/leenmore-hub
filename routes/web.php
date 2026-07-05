@@ -32,4 +32,3 @@ Route::get('resources/{resource}/file', ProjectResourceFileController::class)
 
 require __DIR__.'/admin.php';
 require __DIR__.'/worker.php';
-require __DIR__.'/settings.php';

@@ -6,11 +6,11 @@
         </div>
     </header>
 
-    <div class="py-5 max-w-md mx-auto ">
+    <div class="py-5 max-w-md mx-auto px-2">
         {{-- Admin-editable announcement banner --}}
         @if (filled($announcement))
             <div
-                class="mb-5 flex items-start justify-center gap-2 text-center text-[13px] font-bold leading-relaxed text-primary">
+                class="mb-5 flex items-start justify-center gap-2 text-center text-sm font-bold leading-relaxed text-primary">
                 <x-heroicon-s-megaphone class="mt-0.5 size-5 shrink-0" />
                 <p>{{ $announcement }}</p>
             </div>
@@ -20,8 +20,7 @@
             {{-- Date: a prompt layer sits on top; clicking it reveals the date input below. --}}
             <div x-data="{ revealed: false }">
                 {{-- Prompt layer (shown first) --}}
-                <div x-show="!revealed"
-                    x-on:click="revealed = true; $nextTick(() => $refs.dateInput.focus())"
+                <div x-show="!revealed" x-on:click="revealed = true; $nextTick(() => $refs.dateInput.focus())"
                     class="form-input cursor-pointer text-zinc-500">
                     {{ __('Please enter the actual receipt date.') }}
                 </div>
@@ -38,7 +37,7 @@
             </div>
 
             {{-- Usage category (admin-editable list) --}}
-            <x-ui.select wire:model="receipt_category_id" :label="__('Usage category').' *'">
+            <x-ui.select wire:model="receipt_category_id" :label="__('Usage category') . ' *'">
                 <option value="">{{ __('Please select') }}</option>
                 @foreach ($categories as $category)
                     <option value="{{ $category->id }}">{{ $category->name }}</option>
@@ -46,10 +45,10 @@
             </x-ui.select>
 
             {{-- Vendor --}}
-            <x-ui.input wire:model="vendor" type="text" :label="__('Vendor').' *'" placeholder="{{ __('Vendor') }}" />
+            <x-ui.input wire:model="vendor" type="text" :label="__('Vendor') . ' *'" placeholder="{{ __('Vendor') }}" />
 
             {{-- Amount (KRW, thousands separators) --}}
-            <x-ui.number-input wire:model="amount" :label="__('Amount').' *'" placeholder="{{ __('Amount') }}" />
+            <x-ui.number-input wire:model="amount" :label="__('Amount') . ' *'" placeholder="{{ __('Amount') }}" />
 
             {{-- Notes --}}
             <x-ui.textarea wire:model="notes" rows="4" :label="__('Notes')" placeholder="{{ __('Notes') }}" />

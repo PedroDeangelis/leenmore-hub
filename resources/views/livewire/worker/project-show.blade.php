@@ -22,7 +22,16 @@
         </div>
     </header>
 
-    <div class="space-y-3 py-4 max-w-md mx-auto">
+    <div class="space-y-3 py-4 max-w-md mx-auto px-2">
+        {{-- Admin-editable project message (set on the dashboard project page) --}}
+        @if (filled($project->message))
+            <div
+                class="mb-5 flex items-start justify-center gap-2 text-center text-sm font-bold leading-relaxed text-primary">
+                <x-heroicon-s-megaphone class="mt-0.5 size-5 shrink-0" />
+                <p>{{ $project->message }}</p>
+            </div>
+        @endif
+
         @forelse ($shareholders as $row)
             @php($address = $row->effective_address)
             <div wire:key="ws-{{ $row->id }}" class="rounded-2xl border border-zinc-200 bg-white p-4 shadow-sm">
@@ -43,14 +52,14 @@
                 </div>
 
                 {{-- Shares --}}
-                <div class="mt-3 flex gap-4 rounded-xl bg-zinc-50 px-3 py-2 text-[13px]">
+                <div class="mt-3 flex gap-4 rounded-xl bg-zinc-50 px-3 py-2 text-sm">
                     <div class="flex-1">
-                        <div class="text-[11px] font-semibold text-zinc-400">{{ __('Shares') }}</div>
+                        <div class="text-sm font-semibold text-zinc-400">{{ __('Shares') }}</div>
                         <div class="font-bold tabular-nums text-zinc-800">
                             {{ $row->shares !== null ? number_format($row->shares) : '—' }}</div>
                     </div>
                     <div class="flex-1 border-l border-zinc-200 pl-4">
-                        <div class="text-[11px] font-semibold text-zinc-400">{{ __('Total shares') }}</div>
+                        <div class="text-sm font-semibold text-zinc-400">{{ __('Total shares') }}</div>
                         <div class="font-bold tabular-nums text-zinc-800">
                             {{ $row->shares_total !== null ? number_format($row->shares_total) : '—' }}</div>
                     </div>
@@ -59,7 +68,7 @@
                 {{-- Contact --}}
                 @if ($row->effective_contact)
                     <a href="tel:{{ $row->effective_contact }}"
-                        class="mt-2 inline-flex items-center gap-1.5 text-[13px] font-semibold text-primary">
+                        class="mt-2 inline-flex items-center gap-1.5 text-sm font-semibold text-primary">
                         <x-heroicon-o-phone class="size-4" />{{ $row->effective_contact }}
                     </a>
                 @endif
@@ -67,14 +76,14 @@
                 {{-- Address + field actions --}}
                 @if ($address)
                     <div class="mt-3 border-t border-zinc-100 pt-3">
-                        <div class="flex gap-1.5 text-[13px] text-zinc-600">
+                        <div class="flex gap-1.5 text-sm text-zinc-600">
                             <x-heroicon-o-map-pin class="mt-0.5 size-4 shrink-0 text-zinc-400" />
                             <span>{{ $address }}</span>
                         </div>
                         <div class="mt-2.5 flex gap-2" x-data="{ copied: false }">
                             <button type="button"
                                 x-on:click="navigator.clipboard.writeText(@js($address)); copied = true; setTimeout(() => copied = false, 1500)"
-                                class="inline-flex flex-1 items-center justify-center gap-1.5 rounded-lg border border-zinc-200 py-2 text-[13px] font-semibold text-zinc-700 transition hover:bg-zinc-50">
+                                class="inline-flex flex-1 items-center justify-center gap-1.5 rounded-lg border border-zinc-200 py-2 text-xs font-semibold text-zinc-700 transition hover:bg-zinc-50">
                                 <template x-if="!copied">
                                     <span class="inline-flex items-center gap-1.5"><x-heroicon-o-clipboard-document
                                             class="size-4" />{{ __('Copy address') }}</span>
@@ -87,7 +96,7 @@
                             </button>
                             <a href="https://map.naver.com/v5/search/{{ urlencode($address) }}" target="_blank"
                                 rel="noopener"
-                                class="inline-flex flex-1 items-center justify-center gap-1.5 rounded-lg bg-primary py-2 text-[13px] font-semibold text-white transition hover:bg-primary-light">
+                                class="inline-flex flex-1 items-center justify-center gap-1.5 rounded-lg bg-primary py-2 text-xs font-semibold text-white transition hover:bg-primary-light">
                                 <x-heroicon-o-map class="size-4" />{{ __('View on Naver Map') }}
                             </a>
                         </div>
@@ -96,7 +105,7 @@
 
                 {{-- File an activity report for this shareholder --}}
                 <a href="{{ route('worker.projects.shareholders.report', [$project, $row]) }}" wire:navigate
-                    class="mt-3 inline-flex w-full items-center justify-center gap-1.5 rounded-lg bg-primary py-2.5 text-[13px] font-semibold text-white transition hover:bg-primary-light active:scale-[0.99]">
+                    class="mt-3 inline-flex w-full items-center justify-center gap-1.5 rounded-lg bg-primary py-2.5 text-xs font-semibold text-white transition hover:bg-primary-light active:scale-[0.99]">
                     <x-heroicon-o-pencil-square class="size-4" />{{ __('Activity report') }}
                 </a>
             </div>

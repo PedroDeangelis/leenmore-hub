@@ -57,6 +57,31 @@ class WorkerProjectShowTest extends TestCase
             ->assertDontSee('Bob Roster');
     }
 
+    public function test_the_project_message_is_shown_to_workers(): void
+    {
+        $worker = User::factory()->worker()->create();
+        $project = Project::factory()->published()->create(['message' => '오늘은 강남구 위주로 방문해 주세요']);
+        $this->assignedRow($project, $worker);
+
+        $this->actingAs($worker);
+
+        Livewire::test(ProjectShow::class, ['project' => $project])
+            ->assertSee('오늘은 강남구 위주로 방문해 주세요');
+    }
+
+    public function test_no_message_banner_when_the_project_has_no_message(): void
+    {
+        $worker = User::factory()->worker()->create();
+        $project = Project::factory()->published()->create(['message' => null]);
+        $this->assignedRow($project, $worker);
+
+        $this->actingAs($worker);
+
+        // The megaphone banner block is skipped entirely.
+        Livewire::test(ProjectShow::class, ['project' => $project])
+            ->assertDontSeeHtml('font-bold leading-relaxed text-primary');
+    }
+
     public function test_a_worker_cannot_open_a_project_they_are_not_assigned_to(): void
     {
         $worker = User::factory()->worker()->create();

@@ -59,7 +59,7 @@
                             default => '#9aa0ab',
                         };
                     @endphp
-                    <span class="whitespace-nowrap text-[13px] font-semibold"
+                    <span class="whitespace-nowrap text-sm font-semibold"
                         style="color:{{ $statusColor }};">{{ $project->status->label() }}</span>
                 </div>
             </a>
