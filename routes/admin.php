@@ -1,14 +1,22 @@
 <?php
 
+use App\Http\Controllers\ProjectActivityDataExportController;
 use App\Http\Controllers\ProjectActivityLogExportController;
 use App\Http\Controllers\ProjectJudgmentResultsExportController;
+use App\Http\Controllers\ProjectMultiWorkerRosterExportController;
 use App\Http\Controllers\ProjectShareholderExportController;
+use App\Http\Controllers\ProjectWorkerRosterExportController;
 use App\Http\Controllers\ReportFileController;
 use App\Http\Controllers\ShareholderTemplateController;
 use App\Livewire\Activity\Index as ActivityIndex;
 use App\Livewire\Activity\Report as ActivityReport;
 use App\Livewire\Activity\Roster as ActivityRoster;
+use App\Livewire\ActivityData\Index as ActivityDataIndex;
+use App\Livewire\ActivityData\Show as ActivityDataShow;
 use App\Livewire\Admin\Options as AdminOptions;
+use App\Livewire\EmailToWorker\Compose as EmailToWorkerCompose;
+use App\Livewire\EmailToWorker\History as EmailToWorkerHistory;
+use App\Livewire\EmailToWorker\Index as EmailToWorkerIndex;
 use App\Livewire\Projects\Create as ProjectsCreate;
 use App\Livewire\Projects\Index as ProjectsIndex;
 use App\Livewire\Projects\Show as ProjectsShow;
@@ -108,6 +116,22 @@ Route::middleware(['auth', 'role:admin,office'])->prefix('dashboard')->group(fun
         ->middleware('can:edit-submissions')
         ->name('activity.report');
 
+    // 활동 데이터: per-project worker-productivity analytics (contact/proxy
+    // stats per worker and per day) with the formula-driven Excel export.
+    Route::livewire('activity-data', ActivityDataIndex::class)
+        ->middleware('can:view-activity-data')
+        ->name('activity-data.index');
+
+    Route::livewire('activity-data/{project}', ActivityDataShow::class)
+        ->whereNumber('project')
+        ->middleware('can:view-activity-data')
+        ->name('activity-data.show');
+
+    Route::get('projects/{project}/activity-data/export', ProjectActivityDataExportController::class)
+        ->whereNumber('project')
+        ->middleware('can:view-activity-data')
+        ->name('activity-data.export');
+
     // Receipts archive: admin + office may read worker-submitted receipts.
     Route::livewire('receipts', ReceiptsIndex::class)
         ->middleware('can:view-receipts')
@@ -125,6 +149,36 @@ Route::middleware(['auth', 'role:admin,office'])->prefix('dashboard')->group(fun
     Route::livewire('resources/{project}', ResourcesManage::class)
         ->middleware('can:manage-resources')
         ->name('resources.manage');
+
+    // Email to worker (활동가에게 이메일 보내기): admin-only. Pick a project, compose
+    // an email to its workers (with resource links/files and 명부양식 attachments),
+    // and monitor per-recipient delivery. `history` is declared before
+    // `{project}` so it is not captured as a project id.
+    Route::livewire('email-to-worker', EmailToWorkerIndex::class)
+        ->middleware('can:send-worker-emails')
+        ->name('email-to-worker.index');
+
+    Route::livewire('email-to-worker/history', EmailToWorkerHistory::class)
+        ->middleware('can:send-worker-emails')
+        ->name('email-to-worker.history');
+
+    Route::livewire('email-to-worker/{project}', EmailToWorkerCompose::class)
+        ->whereNumber('project')
+        ->middleware('can:send-worker-emails')
+        ->name('email-to-worker.compose');
+
+    // 명부양식 downloads: the whole-project bundle (one sheet per worker) and one
+    // worker's XLSX/PDF. Sort options come from the compose page's controls.
+    Route::get('projects/{project}/worker-roster', ProjectMultiWorkerRosterExportController::class)
+        ->whereNumber('project')
+        ->middleware('can:send-worker-emails')
+        ->name('email-to-worker.roster.all');
+
+    Route::get('projects/{project}/worker-roster/{user}', ProjectWorkerRosterExportController::class)
+        ->whereNumber('project')
+        ->whereNumber('user')
+        ->middleware('can:send-worker-emails')
+        ->name('email-to-worker.roster');
 
     // Options: admin-only app-wide settings (announcement, receipt categories).
     Route::livewire('options', AdminOptions::class)

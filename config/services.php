@@ -44,4 +44,11 @@ return [
         'password' => env('ESIGNON_MEMB_PASSWORD'),
     ],
 
+    // LibreOffice headless — converts 명부양식 XLSX to PDF. Optional: when the
+    // path is unset the app looks for libreoffice/soffice on PATH, and mPDF
+    // takes over when neither exists.
+    'libreoffice' => [
+        'path' => env('LIBREOFFICE_BIN'),
+    ],
+
 ];

@@ -67,6 +67,14 @@
                 </a>
             @endcan
 
+            @can('view-activity-data')
+                <a href="{{ route('activity-data.index') }}" wire:navigate
+                    class="flex items-center gap-3 rounded-lg px-3 py-3 transition text-sm font-medium {{ request()->routeIs('activity-data.*') ? 'bg-white/15 text-white' : 'text-white/80 hover:bg-white/10' }}">
+                    <x-heroicon-o-chart-bar class="size-5" />
+                    {{ __('Activity data') }}
+                </a>
+            @endcan
+
             @can('view-receipts')
                 <a href="{{ route('receipts.index') }}" wire:navigate
                     class="flex items-center gap-3 rounded-lg px-3 py-3 transition text-sm font-medium {{ request()->routeIs('receipts.*') ? 'bg-white/15 text-white' : 'text-white/80 hover:bg-white/10' }}">
@@ -80,6 +88,14 @@
                     class="flex items-center gap-3 rounded-lg px-3 py-3 transition text-sm font-medium {{ request()->routeIs('resources.*') ? 'bg-white/15 text-white' : 'text-white/80 hover:bg-white/10' }}">
                     <x-heroicon-o-folder class="size-5" />
                     {{ __('Project resources') }}
+                </a>
+            @endcan
+
+            @can('send-worker-emails')
+                <a href="{{ route('email-to-worker.index') }}" wire:navigate
+                    class="flex items-center gap-3 rounded-lg px-3 py-3 transition text-sm font-medium {{ request()->routeIs('email-to-worker.*') ? 'bg-white/15 text-white' : 'text-white/80 hover:bg-white/10' }}">
+                    <x-heroicon-o-envelope class="size-5" />
+                    {{ __('Email to worker') }}
                 </a>
             @endcan
 

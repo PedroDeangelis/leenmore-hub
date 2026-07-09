@@ -100,12 +100,36 @@ class Project extends Model
     }
 
     /**
+     * The 활동가 이메일 batches sent for this project, newest first.
+     *
+     * @return HasMany<WorkerEmail, $this>
+     */
+    public function workerEmails(): HasMany
+    {
+        return $this->hasMany(WorkerEmail::class)->latest('id');
+    }
+
+    /**
      * Live countdown to the shareholder meeting (the end date), or null when
      * no end date is set.
      */
     public function meetingCountdown(): ?MeetingCountdown
     {
         return MeetingCountdown::for($this->end_date);
+    }
+
+    /**
+     * The distinct active workers assigned to this project's roster rows —
+     * the recipient pool for 활동가 이메일 and the 명부양식 downloads.
+     *
+     * @return Builder<User>
+     */
+    public function assignedWorkers(): Builder
+    {
+        return User::query()
+            ->whereNull('deactivated_at')
+            ->whereHas('assignedShareholders', fn (Builder $query) => $query->where('project_id', $this->id))
+            ->orderBy('name');
     }
 
     /**
