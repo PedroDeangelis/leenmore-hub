@@ -67,7 +67,20 @@
       "Bash(grep -nE 'ESIGNON' .env .env.example)",
       "Bash(tail -6 .env)",
       "Bash(grep -iA1 esignon)",
-      "Bash(vendor/bin/pint app/Services/Esignon app/Console app/Models/EsignonShareholder.php app/Http/Controllers/ProjectActivityLogExportController.php database/migrations/2026_06_23_000001_create_esignon_shareholders_table.php database/factories/EsignonShareholderFactory.php config/services.php routes/console.php tests/Feature/Esignon tests/Feature/Projects/ActivityLogExportTest.php)"
+      "Bash(vendor/bin/pint app/Services/Esignon app/Console app/Models/EsignonShareholder.php app/Http/Controllers/ProjectActivityLogExportController.php database/migrations/2026_06_23_000001_create_esignon_shareholders_table.php database/factories/EsignonShareholderFactory.php config/services.php routes/console.php tests/Feature/Esignon tests/Feature/Projects/ActivityLogExportTest.php)",
+      "Bash(sed -E 's/\\(PASSWORD|SECRET|KEY|TOKEN|DSN\\)=.*/\\\\1=***REDACTED***/I' .env.example)",
+      "Bash(sed -E 's/\\(PASSWORD|SECRET|KEY|TOKEN|DSN\\)=.*/\\\\1=***REDACTED***/I' .env)",
+      "Bash(php -v)",
+      "Bash(git -C /home/deangelis/projects/leenmore-hub log --oneline -5)",
+      "Bash(grep -rn 'protected function casts\\\\|protected $casts' -A8 app/Models/User.php)",
+      "Bash(php -r ' *)",
+      "Bash(lando start *)",
+      "Bash(set -e)",
+      "Bash(unzip -l /tmp/claude-1000/-home-deangelis-projects-leenmore-hub/e6e51c6e-d519-44d4-878d-5a3791a66906/scratchpad/leenmore-hub.zip)",
+      "Bash(awk '{print $4}')"
+    ],
+    "additionalDirectories": [
+      "/home/deangelis/projects/leenmore-hub"
     ]
   }
 }

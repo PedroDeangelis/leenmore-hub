@@ -78,6 +78,12 @@ class RosterPdfRenderer
 
     private function libreOfficeBinary(): ?string
     {
+        // Shared hosting usually disables proc_open, and Symfony's Process throws
+        // rather than failing soft — bail out early so mPDF takes over.
+        if (! function_exists('proc_open')) {
+            return null;
+        }
+
         $configured = config('services.libreoffice.path');
         if (is_string($configured) && $configured !== '' && is_executable($configured)) {
             return $configured;

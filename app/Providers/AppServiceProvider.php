@@ -73,14 +73,8 @@ class AppServiceProvider extends ServiceProvider
             app()->isProduction(),
         );
 
-        Password::defaults(fn (): ?Password => app()->isProduction()
-            ? Password::min(12)
-                ->mixedCase()
-                ->letters()
-                ->numbers()
-                ->symbols()
-                ->uncompromised()
-            : null,
-        );
+        // Admins set passwords on behalf of 활동가/office staff, so keep the bar low and
+        // identical in every environment — length only, no complexity or breach check.
+        Password::defaults(fn (): Password => Password::min(6));
     }
 }
