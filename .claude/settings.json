@@ -77,10 +77,24 @@
       "Bash(lando start *)",
       "Bash(set -e)",
       "Bash(unzip -l /tmp/claude-1000/-home-deangelis-projects-leenmore-hub/e6e51c6e-d519-44d4-878d-5a3791a66906/scratchpad/leenmore-hub.zip)",
-      "Bash(awk '{print $4}')"
+      "Bash(awk '{print $4}')",
+      "Bash(xargs -n1 basename)",
+      "Bash(unzip -l leenmore-hub.zip)",
+      "Bash(curl -s --max-time 15 \"https://hub.leenmore.com/.well-known/oauth-authorization-server\")",
+      "Bash(python3 -m json.tool)",
+      "Bash(curl -s --max-time 15 \"https://hub.leenmore.com/.well-known/oauth-protected-resource\")",
+      "Bash(curl -s -i --max-time 15 \"https://hub.leenmore.com/mcp/leenmore\")",
+      "Bash(curl -s -i --max-time 15 -X POST \"https://hub.leenmore.com/mcp/leenmore\" -H \"Content-Type: application/json\" -H \"Accept: application/json, text/event-stream\" -d '{\"jsonrpc\":\"2.0\",\"id\":1,\"method\":\"initialize\",\"params\":{}}')",
+      "Bash(curl -s --max-time 15 -X POST \"https://hub.leenmore.com/oauth/register\" -H \"Content-Type: application/json\" -H \"Accept: application/json\" -d '{\"client_name\":\"probe\",\"redirect_uris\":[\"https://chatgpt.com/connector_platform_oauth_redirect\"]}')",
+      "Bash(curl -s --max-time 15 \"https://hub.leenmore.com/oauth/authorize\")",
+      "Bash(curl -s -o /dev/null -w \" status: %{http_code}\\\\n\" --max-time 15 \"https://hub.leenmore.com/oauth/authorize?client_id=00000000-0000-0000-0000-000000000000&redirect_uri=https://chatgpt.com/x&response_type=code&scope=mcp:use\")",
+      "Bash(curl -s --max-time 15 \"https://hub.leenmore.com/oauth/authorize?client_id=00000000-0000-0000-0000-000000000000&redirect_uri=https://chatgpt.com/x&response_type=code&scope=mcp:use\")",
+      "Bash(python3 -c ' *)",
+      "Bash(sed -n '/### Gemini/,/^---/p' docs/mcp.md)"
     ],
     "additionalDirectories": [
-      "/home/deangelis/projects/leenmore-hub"
+      "/home/deangelis/projects/leenmore-hub",
+      "/home/deangelis/projects/leenmore-hub/docs"
     ]
   }
 }

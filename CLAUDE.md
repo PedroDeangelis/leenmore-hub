@@ -41,6 +41,21 @@ Roles live in `App\Enums\UserRole` (`admin`, `office`, `worker`). Per-ability Ga
 from the single `PERMISSIONS` map in `app/Providers/AppServiceProvider.php` — add new abilities
 there and gate routes with `->middleware('can:<ability>')` and menu items with `@can('<ability>')`.
 
+## MCP server — read-only, and PII never leaves un-redacted
+
+`app/Mcp/` exposes hub data to external AI assistants (ChatGPT, Claude, Gemini) over one shared
+MCP endpoint, registered in `routes/ai.php` behind `auth:api` + `can:use-mcp`. See
+[docs/mcp.md](docs/mcp.md).
+
+Two rules when touching it:
+
+- **Read-only.** Every tool carries `#[IsReadOnly]` and must not write. A test globs
+  `app/Mcp/Tools/` and fails if the annotation is missing, so a write tool can't slip in.
+- **Route personal data through `App\Support\Pii`.** Tool responses are transmitted to OpenAI /
+  Anthropic / Google and may be retained there, so 실명번호 is masked, contacts and full addresses
+  are never sent, and free-text notes stay out of list tools.
+  `tests/Feature/Mcp/RedactionTest.php` is the guard on this — extend it when adding a tool.
+
 ## Tests & formatting
 
 - Run the suite with `php artisan test`.

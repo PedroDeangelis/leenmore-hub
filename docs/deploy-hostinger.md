@@ -142,6 +142,25 @@ ESIGNON_MEMB_EMAIL=…
 ESIGNON_MEMB_PASSWORD=…
 ```
 
+Nothing here is needed for the MCP server ([mcp.md](mcp.md)) — its Passport signing keys are
+generated on the server in Step 7, not configured here.
+
+<details>
+<summary>Unless you would rather keep no key files on disk at all</summary>
+
+`PassportServiceProvider::makeCryptKey()` prefers `PASSPORT_PRIVATE_KEY` / `PASSPORT_PUBLIC_KEY`
+and only falls back to `storage/oauth-*.key` when they are empty. So you *can* generate the pair
+locally with `php artisan passport:keys` and paste the PEM blocks in instead. It reads them through
+`str_replace('\n', "\n", …)`, so a single-line `\n`-escaped value works and a multi-line `.env`
+value is not required. There is no advantage here over Step 7 — it just puts a private key in
+`.env`.
+
+</details>
+
+> ⚠️ `APP_URL` matters twice over once MCP is deployed. The OAuth discovery documents are built
+> from it, so if it is wrong — or still `http://` — Claude and ChatGPT will fail the connector
+> handshake with an unhelpful error, even though the site itself looks fine.
+
 > ⚠️ Real SMTP is live the moment this file lands. Any click on 활동가에게 이메일 보내기 during a
 > client demo sends real mail to real 활동가. Ship `MAIL_MAILER=log` first if that is not wanted —
 > a later `.env` edit is enough to switch, provided no config cache exists (Step 7).
@@ -224,13 +243,19 @@ Then, in phpMyAdmin, clear the volatile tables carried over from local and confi
 TRUNCATE TABLE sessions; TRUNCATE TABLE cache; TRUNCATE TABLE cache_locks;
 TRUNCATE TABLE jobs; TRUNCATE TABLE job_batches; TRUNCATE TABLE failed_jobs;
 
-SELECT COUNT(*) FROM migrations;                      -- expect 27
+SELECT COUNT(*) FROM migrations;                      -- expect 32
 SELECT migration FROM migrations ORDER BY id DESC LIMIT 1;
-                       -- expect 2026_07_05_000002_create_worker_email_recipients_table
+                       -- expect 2026_07_24_064052_create_oauth_device_codes_table
 SELECT COUNT(*) FROM project_shareholders;            -- expect ~1,202,454
 ```
 
 A correct `migrations` table is what tells any future `migrate` run there is nothing pending.
+
+The last five of those 32 are Passport's `oauth_*` tables, which the MCP server needs. They ride
+along in the dump **only if `php artisan migrate` was run locally before dumping** — if the count
+comes back 27 and the newest row is `2026_07_05_000002_create_worker_email_recipients_table`, the
+dump predates them. That is harmless: run `migrate --force` as a one-off cron (Step 7) after the
+import and it adds the five empty tables without touching anything else.
 
 Finally, review `users` before the client logs in: deactivate or re-password test accounts, and
 make sure the client's admin account exists with a known password.
@@ -259,6 +284,29 @@ Both are required, not optional:
 **Running any artisan command without SSH:** create a temporary cron job with the command, set it
 to every minute, wait for one execution, then delete the job. This is how you run `migrate --force`,
 `esignon:sync --project=…`, `optimize:clear`, or the database import above.
+
+### One-off: Passport signing keys (required for MCP)
+
+Run once, through the same temporary-cron pattern, then delete the job:
+
+```
+/usr/bin/php /home/uXXXXXXX/domains/<domain>/leenmore-hub/artisan passport:keys
+```
+
+Passport signs every OAuth access token with an RSA keypair, so without this the consent screen
+appears but the connector never finishes authenticating. The command writes
+`storage/oauth-private.key` and `oauth-public.key` **and chmods them to 600 and 660 itself**, which
+is the whole reason to generate them here rather than upload them.
+
+Both files are gitignored (`/storage/*.key`), so a redeploy will not overwrite them, and
+`passport:keys` refuses to clobber an existing pair without `--force`. Generate once and leave them
+alone — regenerating invalidates every connected assistant's token.
+
+> ⚠️ If you upload the keys by FTP instead, you **must** set `oauth-private.key` to `600` and
+> `oauth-public.key` to `660` in FileZilla (right-click → File permissions). FTP defaults to 644, and
+> at 644 `league/oauth2-server` raises an `E_USER_NOTICE` that Laravel — which runs under
+> `error_reporting(-1)` — converts into a thrown `ErrorException`. The result is not a warning in the
+> log: every MCP request returns a 500.
 
 Optional, once the site is verified and stable:
 
@@ -294,6 +342,15 @@ Optional, once the site is verified and stable:
    403/404.
 9. Hit a nonsense URL — a plain 404, never a stack trace. If you see a trace, `APP_DEBUG` is still
    on or a stale config cache is in place.
+10. **MCP**: `https://hub.<domain>/.well-known/oauth-authorization-server` returns JSON naming an
+    `authorization_endpoint` and `token_endpoint` on the same host. If the host is wrong, `APP_URL`
+    is wrong. Then connect a client following [mcp.md](mcp.md) and ask it for a project's 판단 tally.
+
+    These are two separate proofs. Discovery metadata is assembled from `APP_URL` without signing
+    anything, so passing it says nothing about the keys — those are first exercised when a client
+    exchanges its authorisation code for a token. A 500 at *that* point, having reached the consent
+    screen, means the keys are missing or their permissions are wrong (Step 7), not that anything is
+    misconfigured.
 
 ---
 
