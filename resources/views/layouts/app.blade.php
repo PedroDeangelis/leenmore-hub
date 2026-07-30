@@ -107,6 +107,32 @@
                 </a>
             @endcan
 
+            @can('manage-api-tokens')
+                {{-- API portal: the parent links to token management; the submenu
+                     (one item per endpoint) expands whenever an API page is open. --}}
+                <a href="{{ route('api.tokens') }}" wire:navigate
+                    class="flex items-center gap-3 rounded-lg px-3 py-3 transition text-sm font-medium {{ request()->routeIs('api.*') ? 'bg-white/15 text-white' : 'text-white/80 hover:bg-white/10' }}">
+                    <x-heroicon-o-code-bracket class="size-5" />
+                    {{ __('API') }}
+                </a>
+
+                @if (request()->routeIs('api.*'))
+                    <div class="ms-4 space-y-0.5 border-s border-white/10 ps-3">
+                        <a href="{{ route('api.tokens') }}" wire:navigate
+                            class="block rounded-lg px-3 py-2 text-xs font-medium transition {{ request()->routeIs('api.tokens') ? 'bg-white/15 text-white' : 'text-white/70 hover:bg-white/10' }}">
+                            {{ __('API access') }}
+                        </a>
+                        @foreach (\App\Support\ApiCatalog::all() as $slug => $endpoint)
+                            <a href="{{ route('api.docs', $slug) }}" wire:navigate
+                                class="block rounded-lg px-3 py-2 text-xs transition {{ request()->routeIs('api.docs') && request()->route('endpoint') === $slug ? 'bg-white/15 text-white' : 'text-white/70 hover:bg-white/10' }}">
+                                <span class="me-1.5 font-mono text-[10px] text-white/50">{{ $endpoint['method'] }}</span>
+                                {{ $endpoint['title'] }}
+                            </a>
+                        @endforeach
+                    </div>
+                @endif
+            @endcan
+
             @can('manage-settings')
                 <a href="{{ route('options.edit') }}" wire:navigate
                     class="flex items-center gap-3 rounded-lg px-3 py-3 transition text-sm font-medium {{ request()->routeIs('options.*') ? 'bg-white/15 text-white' : 'text-white/80 hover:bg-white/10' }}">

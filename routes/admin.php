@@ -14,6 +14,8 @@ use App\Livewire\Activity\Roster as ActivityRoster;
 use App\Livewire\ActivityData\Index as ActivityDataIndex;
 use App\Livewire\ActivityData\Show as ActivityDataShow;
 use App\Livewire\Admin\Options as AdminOptions;
+use App\Livewire\Api\Docs as ApiDocs;
+use App\Livewire\Api\Tokens as ApiTokens;
 use App\Livewire\EmailToWorker\Compose as EmailToWorkerCompose;
 use App\Livewire\EmailToWorker\History as EmailToWorkerHistory;
 use App\Livewire\EmailToWorker\Index as EmailToWorkerIndex;
@@ -44,6 +46,16 @@ Route::middleware(['auth', 'role:admin,office'])->prefix('dashboard')->group(fun
     Route::livewire('users/{user}', UsersShow::class)
         ->middleware('can:manage-users')
         ->name('users.show');
+
+    // REST API portal: token management (the landing page) and one docs+tester
+    // page per endpoint. Admin-only, per the manage-api-tokens ability.
+    Route::livewire('api', ApiTokens::class)
+        ->middleware('can:manage-api-tokens')
+        ->name('api.tokens');
+
+    Route::livewire('api/endpoints/{endpoint}', ApiDocs::class)
+        ->middleware('can:manage-api-tokens')
+        ->name('api.docs');
 
     // Projects: admin + office may view; only admin may create/edit/archive.
     // `projects/create` is declared before `projects/{project}` so it is not

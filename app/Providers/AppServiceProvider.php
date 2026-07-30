@@ -40,6 +40,9 @@ class AppServiceProvider extends ServiceProvider
         // Connect an external AI assistant to the read-only MCP server (routes/ai.php).
         // Revoking AI access for a role is a one-line change here.
         'use-mcp' => [UserRole::Admin],
+        // Mint / revoke bearer tokens for the read-only REST API (the API tab).
+        // A token is a master key to hub data, so minting stays with admins.
+        'manage-api-tokens' => [UserRole::Admin],
     ];
 
     /**
@@ -58,6 +61,18 @@ class AppServiceProvider extends ServiceProvider
         $this->configureDefaults();
         $this->configurePermissions();
         $this->configureMcp();
+        $this->configureApi();
+    }
+
+    /**
+     * Rate-limit the read-only REST API (routes/api.php). Keyed by the presented
+     * bearer token where there is one, so a single client's calls throttle against
+     * that client, not the whole API.
+     */
+    protected function configureApi(): void
+    {
+        RateLimiter::for('api', fn (Request $request): Limit => Limit::perMinute(120)
+            ->by($request->bearerToken() ?: $request->ip()));
     }
 
     /**
