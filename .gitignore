@@ -25,3 +25,6 @@ yarn-error.log
 *.backup.gz
 *.gz
 leenmore-hub.zip
+
+# Local database dumps — contain password and API-token hashes.
+/storage/backups/
