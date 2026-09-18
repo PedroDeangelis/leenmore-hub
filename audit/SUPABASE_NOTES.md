@@ -1,3 +1,11 @@
+> [!WARNING]
+> **Verified wrong in places (2026-09-16).** This file was hand-copied and does not match the live
+> database. Known errors: `project.results` is a `text[]` of JSON *strings* (not a JSON array of
+> objects); `shareholder.result` is a numeric **index** into that array, not a name;
+> `shareholder.user` holds worker **names**, not uuids; `date_of_birth` is epoch-milliseconds text;
+> `profiles.email_receiver` is an email address, not a bool; and `receipt.status` is **not** a delete
+> flag. See CLAUDE.md and `app/Support/Supabase/` for what the data actually looks like.
+
 -- supabase-table-structure.txt
 -- Supabase table structure copied/sanitized for Claude.
 -- Purpose: help Claude understand current tables and design better Laravel migrations/models.

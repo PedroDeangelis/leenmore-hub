@@ -2,26 +2,31 @@
 
 namespace App\Support;
 
-use App\Models\Project;
-use App\Models\ProjectShareholder;
-use App\Models\Receipt;
-use App\Models\Submission;
-use Illuminate\Contracts\Pagination\LengthAwarePaginator;
-use Illuminate\Database\Eloquent\Builder;
-use Illuminate\Database\Eloquent\Model;
+use App\Support\Supabase\Judgment;
+use App\Support\Supabase\Num;
+use App\Support\Supabase\ProfileRepository;
+use App\Support\Supabase\ProjectRepository;
+use App\Support\Supabase\ReceiptRepository;
+use App\Support\Supabase\ResultSet;
+use App\Support\Supabase\ShareholderRepository;
+use App\Support\Supabase\SubmissionRepository;
+use Illuminate\Support\Carbon;
 
 /**
  * The read layer behind the REST API (app/Http/Controllers/Api). One method per
  * endpoint, each taking already-validated params and returning a plain array.
  *
  * Both the controllers and the in-app "Try it" tester call these, so what a
- * developer sees documented and what the endpoint returns cannot drift. Every
- * method routes personal data through {@see Pii} and reuses the same
- * {@see JudgmentTally} / {@see ActivityData} the dashboard and exports use, so
- * the API can never disagree with the app's own screens.
+ * developer sees documented and what the endpoint returns cannot drift.
  *
- * This mirrors the MCP tools in app/Mcp/Tools deliberately: same masking, same
- * shapes, different transport.
+ * Everything comes from Supabase, which is the client's own system of record and
+ * is only ever read. Three of its habits are handled here rather than leaked to
+ * callers: numbers are comma-formatted text ({@see Num}), 판단 are a text[] of
+ * JSON strings referenced by array index ({@see ResultSet}), and workers are
+ * uuids on submissions but names on shareholder rows ({@see ProfileRepository}).
+ *
+ * Personal data goes through {@see Pii} on the way out: 실명번호 masked, contacts
+ * reported only as present-or-not, and free-text notes never returned at all.
  */
 final class ApiData
 {
@@ -35,155 +40,154 @@ final class ApiData
      */
     public static function projects(array $params): array
     {
-        $query = Project::query()
-            ->withCount(['shareholders', 'submissions'])
-            ->orderByDesc('start_date')
-            ->orderByDesc('id');
+        $filters = [];
 
         match ($params['status'] ?? null) {
-            'active' => $query->active(),
+            // No soft-delete exists upstream; "active" means not yet archived.
+            'active' => $filters['status'] = 'in.(draft,publish)',
             null, '' => null,
-            default => $query->where('status', $params['status']),
+            default => $filters['status'] = 'eq.'.$params['status'],
         };
 
         if (filled($params['search'] ?? null)) {
-            $query->where('title', 'like', '%'.$params['search'].'%');
+            // ilike, not like: Postgres LIKE is case-sensitive.
+            $filters['title'] = 'ilike.*'.$params['search'].'*';
         }
 
         if (filled($params['from'] ?? null)) {
-            $query->whereDate('start_date', '>=', $params['from']);
+            $filters['start_date'] = 'gte.'.$params['from'];
         }
 
         if (filled($params['to'] ?? null)) {
-            $query->whereDate('start_date', '<=', $params['to']);
+            // Inclusive of the whole day, since start_date carries a time.
+            $filters['and'] = '(start_date.lte.'.$params['to'].'T23:59:59)';
         }
 
-        return self::paginate($query, $params, fn (Project $project): array => [
-            'id' => $project->id,
-            'title' => $project->title,
-            'status' => $project->status->value,
-            'start_date' => $project->start_date?->toDateString(),
-            'meeting_date' => $project->end_date?->toDateString(),
-            'days_until_meeting' => $project->meetingCountdown()?->daysLeft,
-            'shares_issued' => $project->shares_issued,
-            'shares_target' => $project->shares_target,
-            'shareholder_count' => $project->shareholders_count,
-            'submission_count' => $project->submissions_count,
-        ]);
+        [$page, $perPage] = self::pageParams($params);
+        $result = self::projectRepository()->paginate($filters, $page, $perPage);
+
+        return self::envelope(array_map(static function (array $row): array {
+            $counts = self::projectRepository()->shareholderCounts((int) $row['id']);
+
+            return [
+                'id' => (int) $row['id'],
+                'title' => $row['title'],
+                'status' => $row['status'],
+                'start_date' => self::date($row['start_date'] ?? null),
+                'meeting_date' => self::date($row['end_date'] ?? null),
+                'days_until_meeting' => self::daysUntil($row['end_date'] ?? null),
+                'shares_issued' => Num::int($row['shares_issued'] ?? null),
+                'shares_target' => Num::int($row['shares_target'] ?? null),
+                'shareholder_count' => $counts['total'],
+            ];
+        }, $result['rows']), $result['total'], $page, $perPage);
     }
 
     /**
-     * @return array<string, mixed>|null null when the project does not exist / is deleted
+     * @return array<string, mixed>|null null when the project does not exist
      */
     public static function project(int $projectId): ?array
     {
-        $project = Project::query()
-            ->withCount(['shareholders', 'submissions'])
-            ->with('results')
-            ->find($projectId);
+        $row = self::projectRepository()->find($projectId);
 
-        if ($project === null) {
+        if ($row === null) {
             return null;
         }
 
-        $judged = $project->shareholders()->reorder()->whereNotNull('result_id')->count();
-        $tally = JudgmentTally::for($project);
+        $results = ResultSet::fromColumn($row['results'] ?? null);
+        $counts = self::projectRepository()->shareholderCounts($projectId);
+        $target = Num::int($row['shares_target'] ?? null);
 
         return [
-            'id' => $project->id,
-            'title' => $project->title,
-            'status' => $project->status->value,
-            'message' => $project->message,
-            'start_date' => $project->start_date?->toDateString(),
-            'meeting_date' => $project->end_date?->toDateString(),
-            'days_until_meeting' => $project->meetingCountdown()?->daysLeft,
-            'shares_issued' => $project->shares_issued,
-            'shares_target' => $project->shares_target,
-            'shareholder_count' => $project->shareholders_count,
-            'judged_shareholder_count' => $judged,
-            'unjudged_shareholder_count' => $project->shareholders_count - $judged,
-            'submission_count' => $project->submissions_count,
-            'results' => $project->results->map(fn ($result): array => [
-                'id' => $result->id,
-                'name' => $result->name,
-                'color' => $result->color->value,
-                'is_proxy' => $result->color->value === 'green',
-                'contact_required' => $result->contact_required,
-                'attachment_required' => $result->attachment_required,
-            ])->all(),
-            'judgment_tally' => [
-                'has_data' => $tally->hasData(),
-                'groups' => array_map(fn (array $group): array => [
-                    'color' => $group['color']->value,
-                    'total_shares' => $group['totalShares'],
-                    'total_percent_of_target' => $group['totalPercent'],
-                    'rows' => array_map(fn (array $row): array => [
-                        'name' => $row['name'],
-                        'color' => $row['color']->value,
-                        'shares' => $row['shares'],
-                        'percent_of_target' => $row['percent'],
-                    ], $group['rows']),
-                ], $tally->groups),
-            ],
+            'id' => (int) $row['id'],
+            'title' => $row['title'],
+            'status' => $row['status'],
+            'message' => $row['message'] ?? null,
+            'start_date' => self::date($row['start_date'] ?? null),
+            'meeting_date' => self::date($row['end_date'] ?? null),
+            'days_until_meeting' => self::daysUntil($row['end_date'] ?? null),
+            'shares_issued' => Num::int($row['shares_issued'] ?? null),
+            'shares_target' => $target,
+            'shareholder_count' => $counts['total'],
+            'judged_shareholder_count' => $counts['judged'],
+            'unjudged_shareholder_count' => $counts['total'] - $counts['judged'],
+            'results' => $results->toArray(),
+            'judgment_tally' => self::judgmentTally($projectId, $results, $target),
         ];
     }
 
     /**
      * @param  array<string, mixed>  $params
-     * @return array<string, mixed>
+     * @return array<string, mixed>|null
      */
-    public static function shareholders(int $projectId, array $params): array
+    public static function shareholders(int $projectId, array $params): ?array
     {
-        $query = ProjectShareholder::query()
-            ->where('project_id', $projectId)
-            ->with(['shareholder', 'result', 'workers:id,name'])
-            ->orderBy('no');
+        $row = self::projectRepository()->find($projectId);
 
-        if (filled($params['result'] ?? null)) {
-            $query->whereHas('result', fn (Builder $q) => $q->where('name', $params['result']));
+        if ($row === null) {
+            return null;
         }
 
-        // 위임 is any green 판단, never a single label — same rule as ActivityData.
+        $results = ResultSet::fromColumn($row['results'] ?? null);
+        $filters = [];
+
+        // A shareholder's `result` is an index into the project's option list,
+        // so filtering by judgment means resolving names/proxies to indices first.
+        if (filled($params['result'] ?? null)) {
+            $indices = array_values(array_map(
+                static fn (Judgment $j): string => (string) $j->index,
+                array_filter($results->judgments, static fn (Judgment $j): bool => $j->name === $params['result']),
+            ));
+
+            // No such judgment on this project: an empty page, not every row.
+            $filters['result'] = $indices === [] ? 'in.(-1)' : 'in.('.implode(',', $indices).')';
+        }
+
         if (self::boolish($params['proxy_only'] ?? null)) {
-            $query->whereHas('result', fn (Builder $q) => $q->where('color', 'green'));
+            $proxies = $results->proxyIndices();
+            $filters['result'] = $proxies === [] ? 'in.(-1)' : 'in.('.implode(',', $proxies).')';
         }
 
         if (array_key_exists('judged', $params) && $params['judged'] !== null && $params['judged'] !== '') {
-            self::boolish($params['judged'])
-                ? $query->whereNotNull('result_id')
-                : $query->whereNull('result_id');
+            $filters['result'] = self::boolish($params['judged']) ? 'not.is.null' : 'is.null';
         }
 
         if (filled($params['worker_id'] ?? null)) {
-            $query->whereHas('workers', fn (Builder $q) => $q->where('users.id', $params['worker_id']));
+            // Roster assignment is by worker *name*, so translate the uuid.
+            $name = self::profileRepository()->nameFor((string) $params['worker_id']);
+
+            $filters['user'] = $name === null ? 'cs.{__no_such_worker__}' : 'cs.{'.$name.'}';
         }
 
         if (filled($params['search'] ?? null)) {
-            $query->whereHas('shareholder', fn (Builder $q) => $q->where('name', 'like', '%'.$params['search'].'%'));
+            $filters['name'] = 'ilike.*'.$params['search'].'*';
         }
 
-        return self::paginate($query, $params, function (ProjectShareholder $assignment): array {
-            $person = $assignment->shareholder;
+        [$page, $perPage] = self::pageParams($params);
+        $result = self::shareholderRepository()->paginateForProject($projectId, $filters, $page, $perPage);
+
+        return self::envelope(array_map(static function (array $row) use ($results): array {
+            $judgment = $results->resolve($row['result'] ?? null);
 
             return [
-                'id' => $assignment->id,
-                'no' => $assignment->no,
-                'shareholder_id' => $person?->id,
-                'name' => $person?->name,
-                'person_type' => $person?->person_type?->value,
-                'registration_masked' => Pii::registration($person?->registration),
-                'birth_year' => Pii::birthYear($person?->date_of_birth),
-                'region' => Pii::address($assignment->effective_address),
-                'has_contact' => Pii::hasContact($assignment->effective_contact, $assignment->contact_info_2),
-                'shares' => $assignment->shares,
-                'shares_total' => $assignment->shares_total,
-                'result' => $assignment->result?->name,
-                'result_color' => $assignment->result?->color->value,
-                'is_proxy' => $assignment->result?->color->value === 'green',
-                'electronic_voting' => $assignment->electronic_voting,
-                'workers' => $assignment->workers->pluck('name')->all(),
+                // One Supabase row is one person on one project; there is no
+                // separate global person, so this id is both.
+                'id' => (int) $row['id'],
+                'no' => $row['no'] === null ? null : (int) $row['no'],
+                'name' => $row['name'] ?? null,
+                'person_type' => $row['person_type'] ?? null,
+                'registration_masked' => Pii::registration($row['registration'] ?? null),
+                'birth_year' => self::birthYear($row['registration'] ?? null),
+                'region' => Pii::address($row['address'] ?? null),
+                'has_contact' => Pii::hasContact($row['contact_info'] ?? null, $row['contact_info_2'] ?? null),
+                'shares' => Num::int($row['shares'] ?? null),
+                'shares_total' => Num::int($row['shares_total'] ?? null),
+                'result' => $judgment?->name,
+                'result_color' => $judgment?->color,
+                'is_proxy' => $judgment?->isProxy() ?? false,
+                'workers' => array_values(array_filter($row['user'] ?? [])),
             ];
-        });
+        }, $result['rows']), $result['total'], $page, $perPage);
     }
 
     /**
@@ -192,59 +196,76 @@ final class ApiData
      */
     public static function submissions(array $params): array
     {
-        $query = Submission::query()
-            ->with(['project:id,title', 'projectShareholder.shareholder:id,name'])
-            ->orderByDesc('date')
-            ->orderByDesc('id');
+        $filters = [];
 
-        foreach (['project_id' => 'project_id', 'worker_id' => 'user_id'] as $param => $column) {
-            if (filled($params[$param] ?? null)) {
-                $query->where($column, $params[$param]);
-            }
+        if (filled($params['project_id'] ?? null)) {
+            $filters['project_id'] = 'eq.'.$params['project_id'];
         }
 
-        if (filled($params['result'] ?? null)) {
-            $query->where('result', $params['result']);
+        if (filled($params['worker_id'] ?? null)) {
+            // Submissions do carry a real profile uuid, unlike roster rows.
+            $filters['user_id'] = 'eq.'.$params['worker_id'];
         }
 
         if (filled($params['from'] ?? null)) {
-            $query->whereDate('date', '>=', $params['from']);
+            $filters['date'] = 'gte.'.$params['from'];
         }
 
         if (filled($params['to'] ?? null)) {
-            $query->whereDate('date', '<=', $params['to']);
+            $filters['and'] = '(date.lte.'.$params['to'].'T23:59:59)';
         }
 
-        // The free-text `note` is deliberately absent — workers type phone numbers
-        // into it, so it is never returned in a list.
-        return self::paginate($query, $params, fn (Submission $submission): array => [
-            'id' => $submission->id,
-            'date' => $submission->date?->toDateString(),
-            'project_id' => $submission->project_id,
-            'project_title' => $submission->project?->title,
-            'shareholder_name' => $submission->projectShareholder?->shareholder?->name,
-            'project_shareholder_id' => $submission->project_shareholder_id,
-            'worker_id' => $submission->user_id,
-            'worker_name' => $submission->user_name,
-            'result' => $submission->result,
-            'has_contact' => Pii::hasContact($submission->contact),
-            'privacy_consent' => $submission->privacy_consent,
-            'file_count' => count($submission->files ?? []),
-            'entered_by_office' => $submission->created_by_user_id !== null,
-        ]);
+        [$page, $perPage] = self::pageParams($params);
+        $result = self::submissionRepository()->paginate($filters, $page, $perPage);
+
+        // Judgment names are per-project, so decode each project's option list
+        // once rather than per row.
+        $resultSets = self::resultSetsFor(array_column($result['rows'], 'project_id'));
+
+        $rows = array_map(static function (array $row) use ($resultSets): array {
+            $judgment = ($resultSets[(int) $row['project_id']] ?? null)?->resolve($row['result'] ?? null);
+
+            return [
+                'id' => (int) $row['id'],
+                'date' => self::date($row['date'] ?? null),
+                // One legacy row upstream has no project; report that rather
+                // than casting it to a project 0 that does not exist.
+                'project_id' => isset($row['project_id']) ? (int) $row['project_id'] : null,
+                'shareholder_id' => isset($row['shareholder_id']) ? (int) $row['shareholder_id'] : null,
+                'worker_id' => $row['user_id'] ?? null,
+                'worker_name' => $row['user_name'] ?? null,
+                'result' => $judgment?->name,
+                'result_color' => $judgment?->color,
+                'is_proxy' => $judgment?->isProxy() ?? false,
+                'has_contact' => Pii::hasContact($row['contact_worker'] ?? null),
+                'privacy_consent' => filled($row['privacy_consent_file'] ?? null),
+                'file_count' => count($row['files'] ?? []),
+            ];
+        }, $result['rows']);
+
+        // The endpoint documents a `result` filter by judgment *name*, which
+        // upstream cannot express — indices differ per project — so it is applied
+        // after decoding. It therefore narrows the page, not the total.
+        if (filled($params['result'] ?? null)) {
+            $rows = array_values(array_filter($rows, static fn (array $r): bool => $r['result'] === $params['result']));
+        }
+
+        return self::envelope($rows, $result['total'], $page, $perPage);
     }
 
     /**
      * @param  array<string, mixed>  $params
-     * @return array<string, mixed>|null null when the project does not exist / is deleted
+     * @return array<string, mixed>|null null when the project does not exist
      */
     public static function activityData(int $projectId, array $params): ?array
     {
-        $project = Project::query()->with('results')->find($projectId);
+        $row = self::projectRepository()->find($projectId);
 
-        if ($project === null) {
+        if ($row === null) {
             return null;
         }
+
+        $results = ResultSet::fromColumn($row['results'] ?? null);
 
         // Accepted as a comma list (days=a,b) or a repeated param (days[]=a&days[]=b).
         $days = $params['days'] ?? null;
@@ -253,25 +274,90 @@ final class ApiData
             $days = array_values(array_filter(array_map('trim', explode(',', $days))));
         }
 
-        $data = ActivityData::for($project, is_array($days) && $days !== [] ? $days : null);
+        $days = is_array($days) && $days !== [] ? $days : null;
+
+        $submissions = self::submissionRepository()->forProject($projectId);
+
+        $allDays = array_values(array_unique(array_filter(array_map(
+            static fn (array $s): ?string => self::date($s['date'] ?? null),
+            $submissions,
+        ))));
+        sort($allDays);
+
+        if ($days !== null) {
+            $wanted = array_flip($days);
+            $submissions = array_values(array_filter(
+                $submissions,
+                static fn (array $s): bool => isset($wanted[self::date($s['date'] ?? null) ?? '']),
+            ));
+        }
+
+        $includedDays = array_values(array_unique(array_filter(array_map(
+            static fn (array $s): ?string => self::date($s['date'] ?? null),
+            $submissions,
+        ))));
+        sort($includedDays);
+
+        $workers = [];
+
+        foreach ($submissions as $submission) {
+            // Real profile uuid where present; the denormalized name keeps
+            // orphaned legacy rows grouped sensibly.
+            $key = $submission['user_id'] ?? 'n:'.($submission['user_name'] ?? '');
+
+            $workers[$key] ??= [
+                'name' => $submission['user_name'] ?? '—',
+                'total_reports' => 0,
+                'days' => [],
+                // Ascending order means a later report for the same shareholder
+                // overwrites an earlier one, leaving each shareholder's latest.
+                'latest' => [],
+            ];
+
+            $workers[$key]['total_reports']++;
+            $day = self::date($submission['date'] ?? null);
+
+            if ($day !== null) {
+                $workers[$key]['days'][$day] = true;
+            }
+
+            if (($shareholderId = $submission['shareholder_id'] ?? null) !== null) {
+                $workers[$key]['latest'][(int) $shareholderId] = $submission['result'] ?? null;
+            }
+        }
+
+        $workerRows = array_values(array_map(static function (array $worker) use ($results): array {
+            $proxies = 0;
+
+            foreach ($worker['latest'] as $resultIndex) {
+                if ($results->resolve($resultIndex)?->isProxy()) {
+                    $proxies++;
+                }
+            }
+
+            return [
+                'name' => $worker['name'],
+                'total_reports' => $worker['total_reports'],
+                'shareholders_contacted' => count($worker['latest']),
+                'proxy_shareholders' => $proxies,
+                'days_worked' => count($worker['days']),
+            ];
+        }, $workers));
+
+        usort($workerRows, static fn (array $a, array $b): int => $b['total_reports'] <=> $a['total_reports']);
 
         return [
-            'project_id' => $project->id,
-            'project_title' => $project->title,
-            'is_empty' => $data->isEmpty(),
-            'all_activity_days' => $data->allDays(),
-            'days_included' => $data->days(),
-            'summary' => $data->summary(),
-            'workers' => array_map(fn (array $worker): array => [
-                'name' => $worker['name'],
-                'total_reports' => $worker['totalReports'],
-                'shareholders_assigned' => $worker['shareholderCount'],
-                'shares_assigned' => $worker['assignedShares'],
-                'shares_contacted' => $worker['sharesContacted'],
-                'proxy_shareholders' => $worker['proxyShareholders'],
-                'proxy_shares' => $worker['proxyShares'],
-                'days_worked' => $worker['daysWorked'],
-            ], $data->workers()),
+            'project_id' => (int) $row['id'],
+            'project_title' => $row['title'],
+            'is_empty' => $submissions === [],
+            'all_activity_days' => $allDays,
+            'days_included' => $includedDays,
+            'summary' => [
+                'total_reports' => count($submissions),
+                'workers' => count($workerRows),
+                'days' => count($includedDays),
+            ],
+            'workers' => $workerRows,
         ];
     }
 
@@ -281,77 +367,240 @@ final class ApiData
      */
     public static function receipts(array $params): array
     {
-        $filtered = fn (): Builder => Receipt::query()
-            ->when(filled($params['worker_id'] ?? null), fn (Builder $q) => $q->where('user_id', $params['worker_id']))
-            ->when(filled($params['category'] ?? null), fn (Builder $q) => $q->where('category_name', $params['category']))
-            ->when(filled($params['from'] ?? null), fn (Builder $q) => $q->whereDate('date', '>=', $params['from']))
-            ->when(filled($params['to'] ?? null), fn (Builder $q) => $q->whereDate('date', '<=', $params['to']));
+        $filters = [];
 
-        $page = self::paginate(
-            $filtered()->orderByDesc('date')->orderByDesc('id'),
-            $params,
-            fn (Receipt $receipt): array => [
-                'id' => $receipt->id,
-                'date' => $receipt->date?->toDateString(),
-                'worker_id' => $receipt->user_id,
-                'worker_name' => $receipt->user_name,
-                'category' => $receipt->category_name,
-                'vendor' => $receipt->vendor,
-                'amount' => $receipt->amount,
-                'has_attachment' => filled($receipt->attachment),
-            ],
-        );
+        if (filled($params['worker_id'] ?? null)) {
+            $filters['user_id'] = 'eq.'.$params['worker_id'];
+        }
+
+        if (filled($params['category'] ?? null)) {
+            $filters['usage_history'] = 'eq.'.$params['category'];
+        }
+
+        if (filled($params['from'] ?? null)) {
+            $filters['date'] = 'gte.'.$params['from'];
+        }
+
+        if (filled($params['to'] ?? null)) {
+            $filters['and'] = '(date.lte.'.$params['to'].'T23:59:59)';
+        }
+
+        [$page, $perPage] = self::pageParams($params);
+        $result = self::receiptRepository()->paginate($filters, $page, $perPage);
+
+        $rows = array_map(static fn (array $row): array => [
+            'id' => (int) $row['id'],
+            'date' => self::date($row['date'] ?? null),
+            'worker_id' => $row['user_id'] ?? null,
+            'worker_name' => $row['user_name'] ?? null,
+            'category' => $row['usage_history'] ?? null,
+            'vendor' => $row['where_used'] ?? null,
+            'amount' => Num::decimal($row['amount'] ?? null),
+            // Upstream's meaning is unconfirmed — it is NOT a delete flag — so it
+            // is reported as-is and nothing is filtered on it.
+            'status' => $row['status'] ?? null,
+            'has_attachment' => filled($row['attachments'] ?? null),
+        ], $result['rows']);
 
         // Totals cover the whole filtered set, not just the current page.
+        $all = self::receiptRepository()->allMatching($filters);
+        $byCategory = [];
+
+        foreach ($all as $row) {
+            $category = $row['usage_history'] ?? null;
+            $byCategory[$category] ??= ['category' => $category, 'count' => 0, 'amount' => 0.0];
+            $byCategory[$category]['count']++;
+            $byCategory[$category]['amount'] += Num::decimal($row['amount'] ?? null) ?? 0.0;
+        }
+
+        usort($byCategory, static fn (array $a, array $b): int => $b['amount'] <=> $a['amount']);
+
         return [
-            ...$page,
-            'total_amount' => (int) $filtered()->sum('amount'),
-            'by_category' => $filtered()
-                ->selectRaw('category_name, COUNT(*) as count, COALESCE(SUM(amount), 0) as amount')
-                ->groupBy('category_name')
-                ->orderByDesc('amount')
-                ->get()
-                ->map(fn ($row): array => [
-                    'category' => $row->category_name,
-                    'count' => (int) $row->count,
-                    'amount' => (int) $row->amount,
-                ])
-                ->all(),
+            ...self::envelope($rows, $result['total'], $page, $perPage),
+            'total_amount' => array_sum(array_column($byCategory, 'amount')),
+            'by_category' => array_values($byCategory),
         ];
     }
 
     /**
-     * Run a query through the paginator and map each row, capped so a broad
-     * request cannot dump the whole table. Always reports `total`.
+     * The 판단 결과 현황: shares behind each judgment, grouped into colour bands
+     * and measured against the target.
      *
-     * @param  Builder<covariant \Illuminate\Database\Eloquent\Model>  $query
-     * @param  array<string, mixed>  $params
-     * @param  \Closure(mixed): array<string, mixed>  $map
+     * The sums come from a Postgres function rather than PHP — adding up shares
+     * across a 1.4M-row table here would mean fetching the whole roster.
+     *
      * @return array<string, mixed>
      */
-    private static function paginate(Builder $query, array $params, \Closure $map): array
+    private static function judgmentTally(int $projectId, ResultSet $results, ?int $target): array
     {
-        /** @var LengthAwarePaginator<int, Model> $page */
-        $page = $query->paginate(
-            perPage: min(max((int) ($params['per_page'] ?? self::PER_PAGE_DEFAULT), 1), self::PER_PAGE_MAX),
-            page: max((int) ($params['page'] ?? 1), 1),
-        );
+        $buckets = [];
+
+        foreach (self::projectRepository()->tally($projectId) as $bucket) {
+            $buckets[(string) ($bucket['bucket'] ?? '')] = [
+                'count' => (int) ($bucket['cnt'] ?? 0),
+                'shares' => (int) ($bucket['total_shares'] ?? 0),
+            ];
+        }
+
+        $groups = [];
+
+        foreach ($results->judgments as $judgment) {
+            $data = $buckets[(string) $judgment->index] ?? null;
+
+            if ($data === null || $data['shares'] === 0) {
+                continue; // Only populated 판단 are listed.
+            }
+
+            $row = [
+                'name' => $judgment->name,
+                'color' => $judgment->color,
+                'shares' => $data['shares'],
+                'percent_of_target' => $target > 0 ? $data['shares'] / $target * 100 : null,
+            ];
+
+            // Consecutive judgments sharing a colour merge into one band.
+            $last = array_key_last($groups);
+
+            if ($last !== null && $groups[$last]['color'] === $judgment->color) {
+                $groups[$last]['rows'][] = $row;
+                $groups[$last]['total_shares'] += $data['shares'];
+            } else {
+                $groups[] = ['color' => $judgment->color, 'rows' => [$row], 'total_shares' => $data['shares']];
+            }
+        }
+
+        foreach ($groups as &$group) {
+            $group['total_percent_of_target'] = $target > 0 ? $group['total_shares'] / $target * 100 : null;
+        }
+        unset($group);
 
         return [
-            'total' => $page->total(),
-            'page' => $page->currentPage(),
-            'per_page' => $page->perPage(),
-            'last_page' => $page->lastPage(),
-            'data' => array_map($map, $page->items()),
+            'has_data' => $groups !== [],
+            'groups' => $groups,
+            // Electronic proxies (전자위임) are counted upstream in their own
+            // bucket rather than against a judgment index.
+            'electronic_proxy' => $buckets['__eproxy__'] ?? null,
+            'unjudged' => $buckets['__null__'] ?? null,
         ];
     }
 
     /**
-     * Accept true/false, "true"/"false", 1/0, "1"/"0" alike — query strings and
-     * the in-app tester both arrive as strings.
+     * Decode the judgment list for several projects at once.
+     *
+     * @param  list<mixed>  $projectIds
+     * @return array<int, ResultSet>
      */
+    private static function resultSetsFor(array $projectIds): array
+    {
+        $sets = [];
+
+        foreach (array_unique(array_filter($projectIds)) as $projectId) {
+            $row = self::projectRepository()->find((int) $projectId);
+            $sets[(int) $projectId] = ResultSet::fromColumn($row['results'] ?? null);
+        }
+
+        return $sets;
+    }
+
+    /**
+     * @param  list<array<string, mixed>>  $rows
+     * @return array<string, mixed>
+     */
+    private static function envelope(array $rows, int $total, int $page, int $perPage): array
+    {
+        return [
+            'total' => $total,
+            'page' => $page,
+            'per_page' => $perPage,
+            'last_page' => $perPage > 0 ? (int) max(1, ceil($total / $perPage)) : 1,
+            'data' => $rows,
+        ];
+    }
+
+    /**
+     * @param  array<string, mixed>  $params
+     * @return array{int, int}
+     */
+    private static function pageParams(array $params): array
+    {
+        $page = max(1, (int) ($params['page'] ?? 1));
+        $perPage = (int) ($params['per_page'] ?? self::PER_PAGE_DEFAULT);
+        $perPage = max(1, min($perPage ?: self::PER_PAGE_DEFAULT, self::PER_PAGE_MAX));
+
+        return [$page, $perPage];
+    }
+
+    /**
+     * A timestamptz reduced to its date, which is all any endpoint reports.
+     */
+    private static function date(?string $timestamp): ?string
+    {
+        if (blank($timestamp)) {
+            return null;
+        }
+
+        return substr($timestamp, 0, 10);
+    }
+
+    private static function daysUntil(?string $timestamp): ?int
+    {
+        if (blank($timestamp)) {
+            return null;
+        }
+
+        return (int) now()->startOfDay()->diffInDays(
+            Carbon::parse($timestamp)->startOfDay(),
+            absolute: false,
+        );
+    }
+
+    /**
+     * The birth year, derived from the 실명번호 rather than `date_of_birth`.
+     *
+     * That column cannot be trusted: upstream stores JavaScript epoch
+     * milliseconds as text ("470847600000"), and inconsistently — some rows hold
+     * a day count instead. The RRN carries the birth date and a century digit,
+     * which {@see KoreanRegistration} already resolves correctly.
+     *
+     * A year, never a date: a full date of birth is an identifier, the year is a
+     * demographic.
+     */
+    private static function birthYear(?string $registration): ?int
+    {
+        if (blank($registration)) {
+            return null;
+        }
+
+        return Pii::birthYear(KoreanRegistration::from($registration)->dateOfBirth());
+    }
+
     private static function boolish(mixed $value): bool
     {
-        return filter_var($value, FILTER_VALIDATE_BOOLEAN, FILTER_NULL_ON_FAILURE) ?? false;
+        return in_array($value, [true, 1, '1', 'true'], true);
+    }
+
+    private static function projectRepository(): ProjectRepository
+    {
+        return app(ProjectRepository::class);
+    }
+
+    private static function shareholderRepository(): ShareholderRepository
+    {
+        return app(ShareholderRepository::class);
+    }
+
+    private static function submissionRepository(): SubmissionRepository
+    {
+        return app(SubmissionRepository::class);
+    }
+
+    private static function receiptRepository(): ReceiptRepository
+    {
+        return app(ReceiptRepository::class);
+    }
+
+    private static function profileRepository(): ProfileRepository
+    {
+        return app(ProfileRepository::class);
     }
 }

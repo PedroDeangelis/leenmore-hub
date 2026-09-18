@@ -4,6 +4,12 @@ namespace App\Providers;
 
 use App\Enums\UserRole;
 use App\Models\User;
+use App\Support\Supabase\ProfileRepository;
+use App\Support\Supabase\ProjectRepository;
+use App\Support\Supabase\ReceiptRepository;
+use App\Support\Supabase\ShareholderRepository;
+use App\Support\Supabase\SubmissionRepository;
+use App\Support\Supabase\SupabaseClient;
 use Carbon\CarbonImmutable;
 use Illuminate\Cache\RateLimiting\Limit;
 use Illuminate\Http\Request;
@@ -37,7 +43,19 @@ class AppServiceProvider extends ServiceProvider
      */
     public function register(): void
     {
-        //
+        // One client for the whole request, so a single set of credentials and
+        // one connection policy covers every repository.
+        $this->app->singleton(SupabaseClient::class, fn (): SupabaseClient => SupabaseClient::fromConfig());
+
+        foreach ([
+            ProjectRepository::class,
+            ShareholderRepository::class,
+            SubmissionRepository::class,
+            ReceiptRepository::class,
+            ProfileRepository::class,
+        ] as $repository) {
+            $this->app->singleton($repository);
+        }
     }
 
     /**

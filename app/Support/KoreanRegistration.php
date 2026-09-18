@@ -2,7 +2,6 @@
 
 namespace App\Support;
 
-use App\Enums\PersonType;
 use Illuminate\Support\Carbon;
 
 /**
@@ -35,11 +34,6 @@ final readonly class KoreanRegistration
     public function isCorporation(): bool
     {
         return strlen($this->digits) < 6;
-    }
-
-    public function personType(): PersonType
-    {
-        return $this->isCorporation() ? PersonType::Corporation : PersonType::Individual;
     }
 
     /**

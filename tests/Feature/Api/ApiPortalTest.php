@@ -5,11 +5,12 @@ namespace Tests\Feature\Api;
 use App\Livewire\Api\Docs;
 use App\Livewire\Api\Tokens;
 use App\Models\ApiToken;
-use App\Models\Project;
 use App\Models\User;
 use App\Support\ApiCatalog;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Http;
 use Livewire\Livewire;
+use Tests\Support\FakesSupabase;
 use Tests\TestCase;
 
 /**
@@ -19,7 +20,16 @@ use Tests\TestCase;
  */
 class ApiPortalTest extends TestCase
 {
+    use FakesSupabase;
     use RefreshDatabase;
+
+    protected function setUp(): void
+    {
+        parent::setUp();
+
+        // The tester runs the real endpoint handlers, which read Supabase.
+        $this->fakeSupabase();
+    }
 
     public function test_both_roles_can_open_the_api_tab(): void
     {
@@ -127,21 +137,19 @@ class ApiPortalTest extends TestCase
     public function test_the_endpoint_tester_runs_the_query_and_returns_masked_json(): void
     {
         $admin = User::factory()->admin()->create();
-        Project::factory()->create(['title' => 'Spring meeting']);
 
         Livewire::actingAs($admin)->test(Docs::class, ['endpoint' => 'projects'])
             ->call('run')
             ->assertSet('resultStatus', 200)
-            ->assertSee('Spring meeting');
+            ->assertSee('테스트_2026년 임총');
     }
 
     public function test_the_tester_days_repeater_runs_and_joins_rows_into_a_comma_list(): void
     {
         $admin = User::factory()->admin()->create();
-        $project = Project::factory()->create();
 
         $component = Livewire::actingAs($admin)->test(Docs::class, ['endpoint' => 'activity-data'])
-            ->set('params.project', (string) $project->id)
+            ->set('params.project', '207')
             ->call('addListItem', 'days')
             ->call('addListItem', 'days')
             ->call('addListItem', 'days')
@@ -162,6 +170,11 @@ class ApiPortalTest extends TestCase
 
     public function test_the_tester_reports_a_404_for_a_missing_project(): void
     {
+        // Upstream answers an unknown id with an empty array, not an error.
+        $this->refakeSupabase([
+            'https://example.supabase.co/rest/v1/project*' => Http::response([]),
+        ]);
+
         Livewire::actingAs(User::factory()->admin()->create())->test(Docs::class, ['endpoint' => 'project'])
             ->set('params.project', '999999')
             ->call('run')
@@ -184,14 +197,13 @@ class ApiPortalTest extends TestCase
     public function test_a_path_param_typed_into_the_tester_lands_in_the_curl_url(): void
     {
         $admin = User::factory()->admin()->create();
-        $project = Project::factory()->create();
 
         $component = Livewire::actingAs($admin)->test(Docs::class, ['endpoint' => 'project'])
-            ->set('params.project', (string) $project->id);
+            ->set('params.project', '207');
 
         // The id lands in the curl URL; the unfilled {project} placeholder survives
         // only in the static path shown in the page header.
-        $this->assertStringContainsString('/api/v1/projects/'.$project->id, $component->html());
+        $this->assertStringContainsString('/api/v1/projects/207', $component->html());
     }
 
     public function test_the_curl_example_offers_a_jq_pipe_that_is_on_by_default(): void

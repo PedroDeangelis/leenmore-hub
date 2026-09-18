@@ -2,173 +2,166 @@
 
 namespace Tests\Feature\Api;
 
-use App\Enums\ProjectStatus;
-use App\Enums\ResultColor;
-use App\Models\ApiToken;
-use App\Models\Project;
-use App\Models\ProjectResult;
-use App\Models\ProjectShareholder;
-use App\Models\Receipt;
-use App\Models\Shareholder;
-use App\Models\Submission;
-use App\Models\User;
+use App\Support\ApiData;
 use Illuminate\Foundation\Testing\RefreshDatabase;
-use Illuminate\Testing\TestResponse;
+use Tests\Support\FakesSupabase;
 use Tests\TestCase;
 
+/**
+ * The endpoints, against recorded PostgREST payloads.
+ *
+ * These lean deliberately on the details the audit notes got wrong, because
+ * those are what will break first if the upstream shape shifts or the decoding
+ * is "simplified": comma-formatted numbers, judgments as indices into a text[]
+ * of JSON strings, and workers identified two different ways.
+ */
 class ApiEndpointsTest extends TestCase
 {
+    use FakesSupabase;
     use RefreshDatabase;
-
-    private string $token;
 
     protected function setUp(): void
     {
         parent::setUp();
-
-        $this->token = ApiToken::generate('Test client', User::factory()->admin()->create()->id)['plainText'];
+        $this->fakeSupabase();
     }
 
-    /**
-     * @param  array<string, mixed>  $query
-     */
-    private function apiGet(string $path, array $query = []): TestResponse
+    public function test_projects_report_comma_formatted_shares_as_whole_numbers(): void
     {
-        return $this->getJson(
-            '/api/v1/'.ltrim($path, '/').($query === [] ? '' : '?'.http_build_query($query)),
-            ['Authorization' => 'Bearer '.$this->token],
-        );
+        $projects = ApiData::projects([]);
+
+        $this->assertSame(1, $projects['total']);
+
+        $project = $projects['data'][0];
+
+        // "259,498,284" — a plain (int) cast would silently make this 259.
+        $this->assertSame(259498284, $project['shares_issued']);
+        $this->assertSame(14000000, $project['shares_target']);
+        $this->assertSame('2026-09-11', $project['start_date']);
+        $this->assertSame('2026-10-02', $project['meeting_date']);
     }
 
-    public function test_it_lists_projects_with_counts(): void
+    public function test_a_project_decodes_its_judgment_options(): void
     {
-        $project = Project::factory()->create(['title' => 'Spring', 'status' => ProjectStatus::Publish, 'shares_target' => 5000]);
-        ProjectShareholder::factory()->count(2)->for($project)->create();
+        $project = ApiData::project(207);
 
-        $this->apiGet('projects')
-            ->assertOk()
-            ->assertJsonPath('total', 1)
-            ->assertJsonPath('data.0.title', 'Spring')
-            ->assertJsonPath('data.0.shareholder_count', 2);
+        $this->assertCount(4, $project['results']);
+
+        $first = $project['results'][0];
+        $this->assertSame('위임(대면_서명)', $first['name']);
+        $this->assertSame('green', $first['color']);
+        $this->assertTrue($first['is_proxy'], 'a green 판단 is a 위임');
+
+        // The last option carries no `order` key upstream; its array position is
+        // still what a shareholder's `result` points at.
+        $this->assertSame('단순부재', $project['results'][3]['name']);
+        $this->assertSame(3, $project['results'][3]['id']);
+        $this->assertFalse($project['results'][3]['is_proxy']);
     }
 
-    public function test_project_filters_and_pagination_cap_apply(): void
+    public function test_the_judgment_tally_groups_by_colour_and_measures_against_target(): void
     {
-        Project::factory()->create(['title' => 'Live', 'status' => ProjectStatus::Publish]);
-        Project::factory()->create(['title' => 'Old', 'status' => ProjectStatus::Archived]);
+        $tally = ApiData::project(207)['judgment_tally'];
 
-        $this->apiGet('projects', ['status' => 'active'])->assertOk()->assertJsonPath('total', 1);
-        $this->apiGet('projects', ['status' => 'nonsense'])->assertStatus(422);
-        $this->apiGet('projects', ['per_page' => 999])->assertStatus(422);
+        $this->assertTrue($tally['has_data']);
+
+        // Buckets 0 (green) and 1 (lime) differ in colour, so they do not merge.
+        $this->assertSame('green', $tally['groups'][0]['color']);
+        $this->assertSame(3000, $tally['groups'][0]['total_shares']);
+        $this->assertEqualsWithDelta(3000 / 14000000 * 100, $tally['groups'][0]['total_percent_of_target'], 0.0001);
+
+        // Electronic proxies and unjudged rows are counted apart from the bands.
+        $this->assertSame(1, $tally['electronic_proxy']['count']);
+        $this->assertSame(6, $tally['unjudged']['count']);
     }
 
-    public function test_projects_filter_by_start_date_and_sort_latest_first(): void
+    public function test_the_roster_masks_personal_data(): void
     {
-        Project::factory()->create(['title' => 'January', 'start_date' => '2026-01-10']);
-        Project::factory()->create(['title' => 'March', 'start_date' => '2026-03-10']);
-        Project::factory()->create(['title' => 'June', 'start_date' => '2026-06-10']);
+        $roster = ApiData::shareholders(207, []);
+        $holder = $roster['data'][0];
 
-        // Sorted by start_date, latest first.
-        $this->apiGet('projects')
-            ->assertOk()
-            ->assertJsonPath('data.0.title', 'June')
-            ->assertJsonPath('data.1.title', 'March')
-            ->assertJsonPath('data.2.title', 'January');
+        $this->assertSame('780913-2******', $holder['registration_masked']);
+        $this->assertSame(1978, $holder['birth_year'], 'derived from the RRN, not the unreliable date column');
+        $this->assertSame('서울특별시 송파구', $holder['region']);
+        $this->assertTrue($holder['has_contact']);
 
-        // from / to bound the start_date range, inclusive.
-        $this->apiGet('projects', ['from' => '2026-02-01'])->assertOk()->assertJsonPath('total', 2);
-        $this->apiGet('projects', ['to' => '2026-03-10'])->assertOk()->assertJsonPath('total', 2);
-        $this->apiGet('projects', ['from' => '2026-02-01', 'to' => '2026-04-01'])
-            ->assertOk()
-            ->assertJsonPath('total', 1)
-            ->assertJsonPath('data.0.title', 'March');
-
-        $this->apiGet('projects', ['from' => 'not-a-date'])->assertStatus(422);
+        // The raw values must not appear anywhere in the payload.
+        $json = json_encode($roster, JSON_UNESCAPED_UNICODE);
+        $this->assertStringNotContainsString('780913-2345678', $json);
+        $this->assertStringNotContainsString('010-0000-0000', $json);
+        $this->assertStringNotContainsString('어딘가로', $json);
     }
 
-    public function test_get_project_returns_the_judgment_tally(): void
+    public function test_the_roster_resolves_a_judgment_index_to_its_name(): void
     {
-        $project = Project::factory()->create(['shares_target' => 1000]);
-        $green = ProjectResult::factory()->for($project)->create(['name' => '위임(대면_서명)', 'color' => ResultColor::Green, 'sort_order' => 1]);
-        ProjectShareholder::factory()->for($project)->create(['shares' => 300, 'result_id' => $green->id]);
+        $roster = ApiData::shareholders(207, []);
 
-        $this->apiGet('projects/'.$project->id)
-            ->assertOk()
-            ->assertJsonPath('judgment_tally.has_data', true)
-            ->assertJsonPath('judgment_tally.groups.0.total_shares', 300)
-            ->assertJsonPath('results.0.is_proxy', true);
+        // result "0" is an index into the project's options, not a name.
+        $this->assertSame('위임(대면_서명)', $roster['data'][0]['result']);
+        $this->assertSame('green', $roster['data'][0]['result_color']);
+        $this->assertTrue($roster['data'][0]['is_proxy']);
+        $this->assertSame(2720000, $roster['data'][0]['shares']);
+        $this->assertSame(['김활동'], $roster['data'][0]['workers']);
+
+        // An unjudged row reports no judgment rather than guessing one.
+        $this->assertNull($roster['data'][1]['result']);
+        $this->assertFalse($roster['data'][1]['is_proxy']);
+        $this->assertFalse($roster['data'][1]['has_contact']);
     }
 
-    public function test_a_deleted_project_is_404_not_leaked(): void
+    public function test_the_birth_year_handles_the_century_digit(): void
     {
-        $project = Project::factory()->create();
-        $project->markDeleted();
+        $roster = ApiData::shareholders(207, []);
 
-        $this->apiGet('projects/'.$project->id)->assertNotFound();
+        // 000312-3****** — century digit 3 means 2000, not 1900.
+        $this->assertSame(2000, $roster['data'][1]['birth_year']);
     }
 
-    public function test_proxy_only_roster_matches_every_green_judgment(): void
+    public function test_submissions_withhold_the_free_text_note(): void
     {
-        $project = Project::factory()->create();
-        $signed = ProjectResult::factory()->for($project)->create(['name' => '위임(대면)', 'color' => ResultColor::Green]);
-        $sms = ProjectResult::factory()->for($project)->create(['name' => '위임(문자)', 'color' => ResultColor::Green]);
-        $absent = ProjectResult::factory()->for($project)->create(['name' => '부재', 'color' => ResultColor::Gold]);
-        foreach ([$signed, $sms, $absent] as $r) {
-            ProjectShareholder::factory()->for($project)->create(['result_id' => $r->id]);
-        }
+        $submissions = ApiData::submissions([]);
+        $row = $submissions['data'][0];
 
-        $this->apiGet('projects/'.$project->id.'/shareholders', ['proxy_only' => 'true'])
-            ->assertOk()
-            ->assertJsonPath('total', 2);
+        $this->assertSame('위임(대면_서명)', $row['result']);
+        $this->assertTrue($row['is_proxy']);
+        $this->assertTrue($row['has_contact']);
+        $this->assertSame(1, $row['file_count']);
+        $this->assertArrayNotHasKey('note', $row, 'workers type phone numbers into the note');
+
+        $this->assertSame('거부', $submissions['data'][1]['result']);
+        $this->assertTrue($submissions['data'][1]['privacy_consent']);
     }
 
-    public function test_activity_data_and_receipts_and_users_respond(): void
+    public function test_receipts_total_the_filtered_set_and_never_filter_on_status(): void
     {
-        $project = Project::factory()->create();
-        ProjectResult::factory()->for($project)->create(['name' => '위임', 'color' => ResultColor::Green]);
-        $assignment = ProjectShareholder::factory()->for($project)->create(['shares' => 100]);
-        $worker = User::factory()->worker()->create();
-        $assignment->workers()->attach($worker);
-        Submission::factory()->forAssignment($assignment)->create(['user_id' => $worker->id, 'result' => '위임', 'date' => '2026-03-01']);
-        // Pin the receipt to the existing worker; otherwise the factory mints a
-        // second worker and the role=worker assertion below counts two.
-        Receipt::factory()->create(['user_id' => $worker->id, 'category_name' => '식대', 'amount' => 10000]);
+        $receipts = ApiData::receipts([]);
 
-        $this->apiGet('projects/'.$project->id.'/activity-data')->assertOk()->assertJsonPath('is_empty', false);
+        $this->assertSame(14000.0, $receipts['data'][0]['amount']);
+        $this->assertSame('식비', $receipts['data'][0]['category']);
 
-        // days accepts a comma list or a repeated param; both restrict the data.
-        $this->apiGet('projects/'.$project->id.'/activity-data', ['days' => '2026-03-01,2026-03-02'])
-            ->assertOk()->assertJsonPath('days_included', ['2026-03-01']);
-        $this->apiGet('projects/'.$project->id.'/activity-data', ['days' => ['2026-03-01']])
-            ->assertOk()->assertJsonPath('days_included', ['2026-03-01']);
-        $this->apiGet('projects/'.$project->id.'/activity-data', ['days' => '2026-01-01'])
-            ->assertOk()->assertJsonPath('is_empty', true);
+        // status=false rows are ordinary receipts upstream, so both are present
+        // and the flag is passed through untouched.
+        $this->assertCount(2, $receipts['data']);
+        $this->assertFalse($receipts['data'][0]['status']);
+        $this->assertTrue($receipts['data'][1]['status']);
 
-        $this->apiGet('submissions', ['project_id' => $project->id])->assertOk()->assertJsonPath('total', 1);
-        $this->apiGet('receipts')->assertOk()->assertJsonPath('total_amount', 10000);
-        $this->apiGet('users', ['role' => 'worker'])->assertOk()->assertJsonPath('total', 1);
+        $this->assertSame(61000.0, $receipts['total_amount']);
+        $this->assertSame('유류비', $receipts['by_category'][0]['category']);
     }
 
-    public function test_registration_is_masked_and_contacts_never_returned(): void
+    public function test_activity_data_counts_each_workers_latest_judgment(): void
     {
-        $project = Project::factory()->create();
-        $person = Shareholder::factory()->create([
-            'name' => '박하늘',
-            'registration' => '901231-1234567',
-            'contact_info' => '010-9876-5432',
-            'address' => '서울특별시 강남구 테헤란로 152',
-        ]);
-        ProjectShareholder::factory()->for($project)->create(['shareholder_id' => $person->id]);
+        $activity = ApiData::activityData(207, []);
 
-        $response = $this->apiGet('projects/'.$project->id.'/shareholders')->assertOk();
+        $this->assertFalse($activity['is_empty']);
+        $this->assertSame(['2026-09-15', '2026-09-16'], $activity['all_activity_days']);
+        $this->assertCount(1, $activity['workers']);
 
-        $response->assertJsonPath('data.0.registration_masked', '901231-1******')
-            ->assertJsonPath('data.0.region', '서울특별시 강남구')
-            ->assertJsonPath('data.0.has_contact', true);
-
-        $body = $response->getContent();
-        $this->assertStringNotContainsString('1234567', $body);
-        $this->assertStringNotContainsString('010-9876-5432', $body);
-        $this->assertStringNotContainsString('테헤란로', $body);
+        $worker = $activity['workers'][0];
+        $this->assertSame('김활동', $worker['name']);
+        $this->assertSame(2, $worker['total_reports']);
+        $this->assertSame(2, $worker['shareholders_contacted']);
+        $this->assertSame(1, $worker['proxy_shareholders'], 'one of the two latest judgments is a 위임');
+        $this->assertSame(2, $worker['days_worked']);
     }
 }

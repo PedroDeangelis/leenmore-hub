@@ -1,6 +1,11 @@
 # Leenmore Hub — project conventions
 
-Laravel 13 · PHP 8.3 · Livewire 4 · Tailwind CSS v4 (Livewire starter kit).
+Laravel 13 · PHP 8.3 · Livewire 4 · Tailwind CSS v4.
+
+A read-only REST API over the client's Supabase database, plus a small bilingual (한국어/English)
+portal for its documentation, its bearer tokens, and the accounts that use them. Nothing else —
+the projects/shareholders/receipts/worker screens this app once had were removed when the client
+chose to keep their existing website.
 
 ## Icons — use Blade Icons, never hand-write `<svg>`
 
@@ -37,24 +42,51 @@ generates the icon manifest for faster rendering (`php artisan icons:clear` to r
 
 ## Authorization
 
-Roles live in `App\Enums\UserRole` (`admin`, `office`, `worker`). Per-ability Gates are defined
-from the single `PERMISSIONS` map in `app/Providers/AppServiceProvider.php` — add new abilities
-there and gate routes with `->middleware('can:<ability>')` and menu items with `@can('<ability>')`.
+Roles live in `App\Enums\UserRole` (`admin`, `viewer`). Per-ability Gates are defined from the single
+`PERMISSIONS` map in `app/Providers/AppServiceProvider.php` — add new abilities there and gate routes
+with `->middleware('can:<ability>')` and menu items with `@can('<ability>')`.
 
-## MCP server — read-only, and PII never leaves un-redacted
+There are three abilities: `use-api-portal` (both roles), `manage-api-tokens` and `manage-users`
+(admin only). A viewer may read the docs and test an endpoint, but only with an API key assigned to
+them — see below.
 
-`app/Mcp/` exposes hub data to external AI assistants (ChatGPT, Claude, Gemini) over one shared
-MCP endpoint, registered in `routes/ai.php` behind `auth:api` + `can:use-mcp`. See
-[docs/mcp.md](docs/mcp.md).
+## Supabase is the system of record, and we only read it
 
-Two rules when touching it:
+`app/Support/Supabase/` is the entire data layer. The client's own website owns this data; this app
+never writes to it. Rules when touching it:
 
-- **Read-only.** Every tool carries `#[IsReadOnly]` and must not write. A test globs
-  `app/Mcp/Tools/` and fails if the annotation is missing, so a write tool can't slip in.
-- **Route personal data through `App\Support\Pii`.** Tool responses are transmitted to OpenAI /
-  Anthropic / Google and may be retained there, so 실명번호 is masked, contacts and full addresses
-  are never sent, and free-text notes stay out of list tools.
-  `tests/Feature/Mcp/RedactionTest.php` is the guard on this — extend it when adding a tool.
+- **GET only.** `SupabaseClient` exposes no method that issues anything else, which is what makes
+  read-only a property of the code rather than a promise. `SupabaseClientTest` asserts every request
+  made across all six endpoints is a GET — keep that true.
+- **Route personal data through `App\Support\Pii`.** 실명번호 is masked, contact numbers are never
+  returned (only whether one exists), addresses are cut to their region, and the free-text
+  `submission.note` is never selected — workers type phone numbers into it.
+- **Never read a roster unpaginated.** `shareholder` holds ~1.45M rows; an unbounded select against
+  it takes the API down rather than merely being slow.
+
+Upstream has three habits that are easy to get wrong, each handled in one place:
+
+| Habit | Handled by |
+|---|---|
+| Numbers are comma-formatted text (`"259,498,284"`; a plain `(int)` cast yields **259**) | `Supabase\Num` |
+| `project.results` is a `text[]` of JSON *strings*, and a 판단 is referenced by **array index** (`"0"`), not name | `Supabase\ResultSet` |
+| Workers are uuids on submissions/receipts but **names** on roster rows | `Supabase\ProfileRepository` |
+
+`is_proxy` means the 판단's colour is `green` — true of all 639 green options across all 123 live
+projects, every one a 위임 variant.
+
+**`receipt.status` is not a delete flag.** Only 771 of 11,083 rows are true and the rest are ordinary
+receipts; nothing filters on it and its meaning is still an open question for the client.
+
+**The `audit/*.md` notes are unreliable** — they were wrong about `results`, `shareholder.user`,
+`date_of_birth`, `email_receiver` and `receipt.status`. Verify against the live schema, not the dump.
+
+## API tokens
+
+A token is a master key to the data, so `api_tokens.assigned_to` decides who may see one:
+`ApiToken::scopeVisibleTo()` narrows both the token list and the docs tester, and admins alone may
+mint, block or delete. `tests/Feature/Api/TokenVisibilityTest.php` is the guard on that boundary —
+extend it rather than loosening the scope.
 
 ## Tests & formatting
 
