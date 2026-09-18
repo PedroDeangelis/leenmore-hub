@@ -12,26 +12,20 @@ class ExampleTest extends TestCase
 
     public function test_guests_are_sent_from_the_root_to_the_login_page(): void
     {
-        $response = $this->get(route('home'));
-
-        $response->assertRedirect(route('login'));
+        $this->get(route('home'))->assertRedirect(route('login'));
     }
 
-    public function test_logged_in_workers_are_sent_from_the_root_to_the_worker_portal(): void
-    {
-        $this->actingAs(User::factory()->worker()->create());
-
-        $response = $this->get(route('home'));
-
-        $response->assertRedirect(route('worker.dashboard'));
-    }
-
-    public function test_logged_in_admins_are_sent_from_the_root_to_the_dashboard(): void
+    public function test_logged_in_users_are_sent_from_the_root_to_the_api_portal(): void
     {
         $this->actingAs(User::factory()->admin()->create());
 
-        $response = $this->get(route('home'));
+        $this->get(route('home'))->assertRedirect(route('api.tokens'));
+    }
 
-        $response->assertRedirect(route('dashboard'));
+    public function test_viewers_also_land_on_the_api_portal(): void
+    {
+        $this->actingAs(User::factory()->viewer()->create());
+
+        $this->get(route('home'))->assertRedirect(route('api.tokens'));
     }
 }

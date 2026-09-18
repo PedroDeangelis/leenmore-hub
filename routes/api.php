@@ -21,5 +21,4 @@ Route::middleware(['api.token', 'throttle:api'])
         Route::get('projects/{project}/activity-data', [ApiController::class, 'activityData'])->whereNumber('project');
         Route::get('submissions', [ApiController::class, 'submissions']);
         Route::get('receipts', [ApiController::class, 'receipts']);
-        Route::get('users', [ApiController::class, 'users']);
     });

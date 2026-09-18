@@ -42,14 +42,6 @@ return [
             'driver' => 'session',
             'provider' => 'users',
         ],
-
-        // Passport-issued OAuth tokens, used only by the MCP server in
-        // routes/ai.php so external AI clients can reach the read-only tools.
-        // The app itself stays entirely session-based on the `web` guard.
-        'api' => [
-            'driver' => 'passport',
-            'provider' => 'users',
-        ],
     ],
 
     /*

@@ -4,7 +4,6 @@ namespace Tests\Feature\Auth;
 
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
-use Laravel\Fortify\Features;
 use Tests\TestCase;
 
 class AuthenticationTest extends TestCase
@@ -13,103 +12,46 @@ class AuthenticationTest extends TestCase
 
     public function test_login_screen_can_be_rendered(): void
     {
-        $response = $this->get(route('login'));
-
-        $response->assertOk();
+        $this->get(route('login'))->assertOk();
     }
 
-    public function test_workers_are_redirected_to_the_worker_portal_after_login(): void
+    public function test_everyone_lands_on_the_api_portal_after_login(): void
     {
-        $user = User::factory()->worker()->create();
+        foreach ([User::factory()->admin(), User::factory()->viewer()] as $factory) {
+            $user = $factory->create();
 
-        $response = $this->post(route('login.store'), [
-            'email' => $user->email,
-            'password' => 'password',
-        ]);
+            $this->post(route('login.store'), [
+                'email' => $user->email,
+                'password' => 'password',
+            ])
+                ->assertSessionHasNoErrors()
+                ->assertRedirect(route('api.tokens', absolute: false));
 
-        $response
-            ->assertSessionHasNoErrors()
-            ->assertRedirect(route('worker.dashboard', absolute: false));
-
-        $this->assertAuthenticated();
+            $this->assertAuthenticated();
+            $this->post(route('logout'));
+        }
     }
 
     public function test_logins_always_set_a_remember_cookie(): void
     {
-        $user = User::factory()->worker()->create();
+        $user = User::factory()->create();
 
-        $response = $this->post(route('login.store'), [
+        $this->post(route('login.store'), [
             'email' => $user->email,
             'password' => 'password',
             'remember' => '1', // always sent as a hidden field on the login form
-        ]);
-
-        $response->assertCookie(auth()->guard('web')->getRecallerName());
-    }
-
-    public function test_admins_are_redirected_to_the_admin_dashboard_after_login(): void
-    {
-        $user = User::factory()->admin()->create();
-
-        $response = $this->post(route('login.store'), [
-            'email' => $user->email,
-            'password' => 'password',
-        ]);
-
-        $response
-            ->assertSessionHasNoErrors()
-            ->assertRedirect(route('dashboard', absolute: false));
-
-        $this->assertAuthenticated();
-    }
-
-    public function test_office_users_are_redirected_to_the_admin_dashboard_after_login(): void
-    {
-        $user = User::factory()->office()->create();
-
-        $response = $this->post(route('login.store'), [
-            'email' => $user->email,
-            'password' => 'password',
-        ]);
-
-        $response
-            ->assertSessionHasNoErrors()
-            ->assertRedirect(route('dashboard', absolute: false));
-
-        $this->assertAuthenticated();
+        ])->assertCookie(auth()->guard('web')->getRecallerName());
     }
 
     public function test_users_can_not_authenticate_with_invalid_password(): void
     {
         $user = User::factory()->create();
 
-        $response = $this->post(route('login.store'), [
+        $this->post(route('login.store'), [
             'email' => $user->email,
             'password' => 'wrong-password',
-        ]);
+        ])->assertSessionHasErrorsIn('email');
 
-        $response->assertSessionHasErrorsIn('email');
-
-        $this->assertGuest();
-    }
-
-    public function test_users_with_two_factor_enabled_are_redirected_to_two_factor_challenge(): void
-    {
-        $this->skipUnlessFortifyHas(Features::twoFactorAuthentication());
-
-        Features::twoFactorAuthentication([
-            'confirm' => true,
-            'confirmPassword' => true,
-        ]);
-
-        $user = User::factory()->withTwoFactor()->create();
-
-        $response = $this->post(route('login.store'), [
-            'email' => $user->email,
-            'password' => 'password',
-        ]);
-
-        $response->assertRedirect(route('two-factor.login'));
         $this->assertGuest();
     }
 
@@ -117,9 +59,7 @@ class AuthenticationTest extends TestCase
     {
         $user = User::factory()->create();
 
-        $response = $this->actingAs($user)->post(route('logout'));
-
-        $response->assertRedirect(route('home'));
+        $this->actingAs($user)->post(route('logout'))->assertRedirect(route('home'));
 
         $this->assertGuest();
     }

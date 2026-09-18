@@ -1,34 +1,47 @@
 <?php
 
-use App\Http\Controllers\ProjectResourceFileController;
-use App\Http\Controllers\ReceiptFileController;
+use App\Livewire\Api\Docs as ApiDocs;
+use App\Livewire\Api\Tokens as ApiTokens;
+use App\Livewire\Users\Index as UsersIndex;
+use App\Livewire\Users\Show as UsersShow;
 use Illuminate\Support\Facades\Route;
 
 /*
- * Like the legacy React app, the root is the login page: guests are sent
- * to /login, authenticated users to their own area.
+ * The whole web surface: an API portal and the handful of accounts that may use
+ * it. Everything the hub used to be — projects, shareholders, activity reports,
+ * receipts, resources, the worker portal — is gone; Supabase remains the system
+ * of record and this app only reads from it (see routes/api.php).
+ *
+ * Guests land on the login page; everyone else lands on the API portal, which is
+ * the only thing here worth landing on.
  */
 Route::get('/', function () {
-    if (auth()->check()) {
-        return redirect()->route(
-            auth()->user()->role->worksInAdminArea() ? 'dashboard' : 'worker.dashboard'
-        );
-    }
-
-    return redirect()->route('login');
+    return auth()->check()
+        ? redirect()->route('api.tokens')
+        : redirect()->route('login');
 })->name('home');
 
-// A receipt's attachment — served to its owner (worker) or admin/office. The
-// controller authorizes per-receipt, so it lives outside the role-scoped groups.
-Route::get('receipts/{receipt}/attachment', ReceiptFileController::class)
-    ->middleware('auth')
-    ->name('receipts.file');
+Route::middleware('auth')->prefix('dashboard')->group(function (): void {
+    /*
+     * REST API portal: token management (the landing page) and one docs+tester
+     * page per endpoint. Viewers may read the docs and test with a key assigned
+     * to them; minting and revoking keys is admin-only, enforced inside the
+     * component rather than here so a viewer can still reach the page.
+     */
+    Route::livewire('api', ApiTokens::class)
+        ->middleware('can:use-api-portal')
+        ->name('api.tokens');
 
-// A project resource's file — served to admin/office or an assigned worker. The
-// controller authorizes per-resource, so it lives outside the role-scoped groups.
-Route::get('resources/{resource}/file', ProjectResourceFileController::class)
-    ->middleware('auth')
-    ->name('resources.file');
+    Route::livewire('api/endpoints/{endpoint}', ApiDocs::class)
+        ->middleware('can:use-api-portal')
+        ->name('api.docs');
 
-require __DIR__.'/admin.php';
-require __DIR__.'/worker.php';
+    // Login accounts for this portal. Admin-only.
+    Route::livewire('users', UsersIndex::class)
+        ->middleware('can:manage-users')
+        ->name('users.index');
+
+    Route::livewire('users/{user}', UsersShow::class)
+        ->middleware('can:manage-users')
+        ->name('users.show');
+});

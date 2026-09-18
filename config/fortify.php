@@ -73,7 +73,7 @@ return [
     |
     */
 
-    'home' => '/dashboard',
+    'home' => '/dashboard/api',
 
     /*
     |--------------------------------------------------------------------------
@@ -144,11 +144,9 @@ return [
     */
 
     'features' => [
-        // Public registration disabled — accounts are created by admins
-        // (see audit/AUTH_ROLES_PLAN.md). Re-enable: Features::registration()
-
-        Features::resetPasswords(),
-        Features::emailVerification(),
+        // Deliberately empty. Accounts are created and reset by an admin on the
+        // Users tab; there is no public registration, password reset, email
+        // verification or 2FA on this portal.
     ],
 
 ];

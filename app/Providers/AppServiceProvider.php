@@ -13,7 +13,6 @@ use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Support\ServiceProvider;
 use Illuminate\Validation\Rules\Password;
-use Laravel\Passport\Passport;
 
 class AppServiceProvider extends ServiceProvider
 {
@@ -22,27 +21,15 @@ class AppServiceProvider extends ServiceProvider
      * visibility (@can in Blade). See audit/AUTH_ROLES_PLAN.md §6.
      */
     private const PERMISSIONS = [
-        'access-admin-area' => [UserRole::Admin, UserRole::Office],
-        'manage-users' => [UserRole::Admin],
-        'manage-projects' => [UserRole::Admin],
-        'manage-settings' => [UserRole::Admin],
-        'send-worker-emails' => [UserRole::Admin],
-        'bulk-delete' => [UserRole::Admin],
-        'view-projects' => [UserRole::Admin, UserRole::Office],
-        'view-submissions' => [UserRole::Admin, UserRole::Office],
-        'view-receipts' => [UserRole::Admin, UserRole::Office],
-        'manage-receipts' => [UserRole::Admin, UserRole::Office],
-        'view-activity-data' => [UserRole::Admin, UserRole::Office],
-        'edit-submissions' => [UserRole::Admin, UserRole::Office],
-        'manage-shareholders' => [UserRole::Admin, UserRole::Office],
-        'manage-resources' => [UserRole::Admin, UserRole::Office],
-        'export-data' => [UserRole::Admin, UserRole::Office],
-        // Connect an external AI assistant to the read-only MCP server (routes/ai.php).
-        // Revoking AI access for a role is a one-line change here.
-        'use-mcp' => [UserRole::Admin],
-        // Mint / revoke bearer tokens for the read-only REST API (the API tab).
-        // A token is a master key to hub data, so minting stays with admins.
+        // Read the API docs and test an endpoint. Viewers get this so they can
+        // work against the API; what a viewer may test with is narrowed further
+        // by token assignment (see App\Livewire\Api\Docs::selectableTokens()).
+        'use-api-portal' => [UserRole::Admin, UserRole::Viewer],
+        // Mint / revoke bearer tokens. A token is a master key to the data, so
+        // minting stays with admins.
         'manage-api-tokens' => [UserRole::Admin],
+        // Create and edit the login accounts for this portal.
+        'manage-users' => [UserRole::Admin],
     ];
 
     /**
@@ -60,7 +47,6 @@ class AppServiceProvider extends ServiceProvider
     {
         $this->configureDefaults();
         $this->configurePermissions();
-        $this->configureMcp();
         $this->configureApi();
     }
 
@@ -73,22 +59,6 @@ class AppServiceProvider extends ServiceProvider
     {
         RateLimiter::for('api', fn (Request $request): Limit => Limit::perMinute(120)
             ->by($request->bearerToken() ?: $request->ip()));
-    }
-
-    /**
-     * Wire up the read-only MCP server that external AI assistants connect to.
-     * The server itself is registered in routes/ai.php.
-     */
-    protected function configureMcp(): void
-    {
-        // Passport renders our own consent screen rather than its packaged one, so the
-        // page a user is asked to approve on is visibly the hub.
-        Passport::authorizationView(fn (array $parameters) => view('mcp.authorize', $parameters));
-
-        // AI clients fan out tool calls quickly when answering one question. Per-user
-        // where a token is attached, per-IP for unauthenticated handshake attempts.
-        RateLimiter::for('mcp', fn (Request $request): Limit => Limit::perMinute(60)
-            ->by($request->user()?->id ?: $request->ip()));
     }
 
     /**
@@ -112,7 +82,7 @@ class AppServiceProvider extends ServiceProvider
             app()->isProduction(),
         );
 
-        // Admins set passwords on behalf of 활동가/office staff, so keep the bar low and
+        // Admins set passwords on behalf of everyone else, so keep the bar low and
         // identical in every environment — length only, no complexity or breach check.
         Password::defaults(fn (): Password => Password::min(6));
     }

@@ -10,9 +10,8 @@ use Symfony\Component\HttpFoundation\Response;
 
 /**
  * Guards the read-only REST API (routes/api.php) with a bearer token minted on
- * the API tab. Deliberately independent of Passport / `auth:api`, which back the
- * MCP OAuth flow — this is the plain-token path an outside developer or a Gemini
- * bearer-header client uses.
+ * the API tab. A plain first-party bearer token: no OAuth, no session, nothing
+ * for an outside developer to negotiate beyond sending the header.
  *
  * The matched token is bound to the request as `api_token` for logging; there is
  * no acting user, because every endpoint returns the same masked, read-only view.

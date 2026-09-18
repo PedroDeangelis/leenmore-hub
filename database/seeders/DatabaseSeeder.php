@@ -11,7 +11,8 @@ class DatabaseSeeder extends Seeder
     use WithoutModelEvents;
 
     /**
-     * Seed the application's database.
+     * One admin and one viewer — enough to exercise both sides of the
+     * permission map locally.
      */
     public function run(): void
     {
@@ -20,14 +21,9 @@ class DatabaseSeeder extends Seeder
             'email' => 'admin@example.com',
         ]);
 
-        User::factory()->office()->create([
-            'name' => 'Office',
-            'email' => 'office@example.com',
-        ]);
-
-        User::factory()->worker()->create([
-            'name' => 'Worker',
-            'email' => 'worker@example.com',
+        User::factory()->viewer()->create([
+            'name' => 'Viewer',
+            'email' => 'viewer@example.com',
         ]);
     }
 }

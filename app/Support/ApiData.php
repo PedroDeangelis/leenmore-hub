@@ -6,7 +6,6 @@ use App\Models\Project;
 use App\Models\ProjectShareholder;
 use App\Models\Receipt;
 use App\Models\Submission;
-use App\Models\User;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
@@ -319,40 +318,6 @@ final class ApiData
                 ])
                 ->all(),
         ];
-    }
-
-    /**
-     * @param  array<string, mixed>  $params
-     * @return array<string, mixed>
-     */
-    public static function users(array $params): array
-    {
-        $query = User::query()->orderBy('name');
-
-        if (filled($params['role'] ?? null)) {
-            $query->where('role', $params['role']);
-        }
-
-        if (array_key_exists('active', $params) && $params['active'] !== null && $params['active'] !== '') {
-            self::boolish($params['active'])
-                ? $query->whereNull('deactivated_at')
-                : $query->whereNotNull('deactivated_at');
-        }
-
-        if (filled($params['search'] ?? null)) {
-            $query->where('name', 'like', '%'.$params['search'].'%');
-        }
-
-        // Staff email and phone are personal contact details — only presence is reported.
-        return self::paginate($query, $params, fn (User $user): array => [
-            'id' => $user->id,
-            'name' => $user->name,
-            'role' => $user->role->value,
-            'is_active' => $user->deactivated_at === null,
-            'deactivated_at' => $user->deactivated_at?->toDateString(),
-            'has_phone' => filled($user->phone),
-            'locale' => $user->locale,
-        ]);
     }
 
     /**

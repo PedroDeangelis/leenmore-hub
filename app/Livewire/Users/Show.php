@@ -2,8 +2,8 @@
 
 namespace App\Livewire\Users;
 
-use App\Concerns\ProfileValidationRules;
 use App\Enums\UserRole;
+use App\Http\Middleware\SetUserLocale;
 use App\Models\User;
 use Illuminate\Validation\Rule;
 use Illuminate\Validation\Rules\Password;
@@ -16,18 +16,12 @@ use Livewire\Component;
 #[Title('User profile')]
 class Show extends Component
 {
-    use ProfileValidationRules;
-
     #[Locked]
     public int $userId;
 
     public string $name = '';
 
     public string $email = '';
-
-    public ?string $email_receiver = '';
-
-    public ?string $phone = '';
 
     public string $role = '';
 
@@ -43,8 +37,6 @@ class Show extends Component
         $this->userId = $user->id;
         $this->name = $user->name;
         $this->email = $user->email;
-        $this->email_receiver = $user->email_receiver;
-        $this->phone = $user->phone;
         $this->role = $user->role->value;
         $this->locale = $user->locale ?? config('app.locale');
     }
@@ -53,16 +45,14 @@ class Show extends Component
      * Update the editable profile fields.
      *
      * The login email is intentionally read-only, so it is never validated or
-     * saved. `email_receiver` is the optional address notifications are sent to.
+     * saved — changing who an account belongs to means making a new account.
      */
     public function updateProfile(): void
     {
         $validated = $this->validate([
-            'name' => $this->nameRules(),
-            'email_receiver' => ['nullable', 'string', 'email', 'max:255'],
-            'phone' => ['nullable', 'string', 'max:50'],
+            'name' => ['required', 'string', 'max:255'],
             'role' => ['required', Rule::enum(UserRole::class)],
-            'locale' => ['required', 'string', 'in:ko,en'],
+            'locale' => ['required', 'string', Rule::in(SetUserLocale::SUPPORTED)],
         ]);
 
         // Guard against an admin locking themselves out by self-demotion.
@@ -71,9 +61,6 @@ class Show extends Component
 
             return;
         }
-
-        $validated['email_receiver'] = $validated['email_receiver'] ?: null;
-        $validated['phone'] = $validated['phone'] ?: null;
 
         $this->user()->fill($validated)->save();
 

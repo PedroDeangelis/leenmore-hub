@@ -21,11 +21,18 @@ class ApiPortalTest extends TestCase
 {
     use RefreshDatabase;
 
-    public function test_only_admins_can_open_the_api_tab(): void
+    public function test_both_roles_can_open_the_api_tab(): void
     {
+        // Viewers are here to collect and use a key, so the page itself is open
+        // to them; what they may see and do on it is narrowed by role instead
+        // (see TokenVisibilityTest).
         $this->actingAs(User::factory()->admin()->create())->get(route('api.tokens'))->assertOk();
-        $this->actingAs(User::factory()->office()->create())->get(route('api.tokens'))->assertForbidden();
-        $this->actingAs(User::factory()->worker()->create())->get(route('api.tokens'))->assertRedirect(route('worker.dashboard'));
+        $this->actingAs(User::factory()->viewer()->create())->get(route('api.tokens'))->assertOk();
+    }
+
+    public function test_guests_are_sent_to_the_login_page(): void
+    {
+        $this->get(route('api.tokens'))->assertRedirect(route('login'));
     }
 
     public function test_creating_a_token_reveals_the_plaintext_and_stores_hash_plus_encrypted_copy(): void

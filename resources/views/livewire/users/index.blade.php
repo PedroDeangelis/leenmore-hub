@@ -6,7 +6,7 @@
         </div>
 
         <div class="w-full sm:w-64">
-            <x-ui.input wire:model.live.debounce.300ms="search" type="search" :placeholder="__('Search by name, email or phone')"
+            <x-ui.input wire:model.live.debounce.300ms="search" type="search" :placeholder="__('Search by name or email')"
                 aria-label="{{ __('Search users') }}" />
         </div>
     </div>
@@ -16,7 +16,6 @@
             <x-ui.table.heading>{{ __('Name') }}</x-ui.table.heading>
             <x-ui.table.heading>{{ __('Email') }}</x-ui.table.heading>
             <x-ui.table.heading>{{ __('Role') }}</x-ui.table.heading>
-            <x-ui.table.heading>{{ __('Phone') }}</x-ui.table.heading>
             <x-ui.table.heading>{{ __('Status') }}</x-ui.table.heading>
             <x-ui.table.heading>{{ __('Action') }}</x-ui.table.heading>
         </x-slot:head>
@@ -37,10 +36,9 @@
                 <x-ui.table.cell>
                     <span
                         class="inline-flex items-center rounded-full bg-primary/10 px-2.5 py-0.5 text-xs font-medium text-primary">
-                        {{ __(ucfirst($user->role->value)) }}
+                        {{ $user->role->label() }}
                     </span>
                 </x-ui.table.cell>
-                <x-ui.table.cell class="text-zinc-600">{{ $user->phone ?: '—' }}</x-ui.table.cell>
                 <x-ui.table.cell>
                     @if ($user->deactivated_at)
                         <span

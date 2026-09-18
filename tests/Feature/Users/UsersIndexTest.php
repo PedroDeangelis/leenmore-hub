@@ -23,24 +23,13 @@ class UsersIndexTest extends TestCase
             ->assertSee('Listed Person');
     }
 
-    public function test_office_users_cannot_view_the_users_list(): void
+    public function test_viewers_cannot_view_the_users_list(): void
     {
-        $office = User::factory()->office()->create();
+        $viewer = User::factory()->viewer()->create();
 
-        $this->actingAs($office)
+        $this->actingAs($viewer)
             ->get(route('users.index'))
             ->assertForbidden();
-    }
-
-    public function test_workers_cannot_view_the_users_list(): void
-    {
-        $worker = User::factory()->worker()->create();
-
-        // The role middleware redirects non-admin-area users to their own home
-        // before the manage-users gate is reached.
-        $this->actingAs($worker)
-            ->get(route('users.index'))
-            ->assertRedirect(route('worker.dashboard'));
     }
 
     public function test_the_list_can_be_searched(): void

@@ -165,26 +165,6 @@ final class ApiCatalog
                 ],
                 'run' => fn (array $p): array => ApiData::receipts($p),
             ],
-            'users' => [
-                'method' => 'GET',
-                'path' => self::BASE.'/users',
-                'title' => 'List staff and workers',
-                'summary' => 'Hub accounts: field workers (활동가) and back-office staff, with role and active state. Email and phone are never returned.',
-                'params' => [
-                    ['name' => 'role', 'in' => 'query', 'type' => 'string', 'required' => false,
-                        'description' => 'worker = field worker; admin and office are back-office staff.',
-                        'options' => ['admin', 'office', 'worker'],
-                        'rules' => ['sometimes', 'string', 'in:admin,office,worker']],
-                    ['name' => 'active', 'in' => 'query', 'type' => 'boolean', 'required' => false,
-                        'description' => 'true = active accounts only; false = deactivated only.',
-                        'options' => ['true', 'false'], 'rules' => ['sometimes', 'in:true,false,1,0']],
-                    ['name' => 'search', 'in' => 'query', 'type' => 'string', 'required' => false,
-                        'description' => "Match against the account's name.",
-                        'rules' => ['sometimes', 'string', 'max:100']],
-                    ...$page,
-                ],
-                'run' => fn (array $p): array => ApiData::users($p),
-            ],
         ];
     }
 

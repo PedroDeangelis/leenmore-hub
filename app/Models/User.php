@@ -8,21 +8,16 @@ use Database\Factories\UserFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Attributes\Hidden;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
-use Illuminate\Database\Eloquent\Relations\BelongsToMany;
-use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 use Illuminate\Support\Str;
-use Laravel\Fortify\TwoFactorAuthenticatable;
-use Laravel\Passport\Contracts\OAuthenticatable;
-use Laravel\Passport\HasApiTokens;
 
-#[Fillable(['name', 'email', 'password', 'role', 'phone', 'email_receiver', 'locale'])]
-#[Hidden(['password', 'two_factor_secret', 'two_factor_recovery_codes', 'remember_token'])]
-class User extends Authenticatable implements OAuthenticatable
+#[Fillable(['name', 'email', 'password', 'role', 'locale'])]
+#[Hidden(['password', 'remember_token'])]
+class User extends Authenticatable
 {
     /** @use HasFactory<UserFactory> */
-    use HasApiTokens, HasFactory, Notifiable, TwoFactorAuthenticatable;
+    use HasFactory, Notifiable;
 
     /**
      * Get the attributes that should be cast.
@@ -32,7 +27,6 @@ class User extends Authenticatable implements OAuthenticatable
     protected function casts(): array
     {
         return [
-            'email_verified_at' => 'datetime',
             'password' => 'hashed',
             'role' => UserRole::class,
             'deactivated_at' => 'datetime',
@@ -44,34 +38,9 @@ class User extends Authenticatable implements OAuthenticatable
         return $this->role === UserRole::Admin;
     }
 
-    public function isOffice(): bool
+    public function isViewer(): bool
     {
-        return $this->role === UserRole::Office;
-    }
-
-    public function isWorker(): bool
-    {
-        return $this->role === UserRole::Worker;
-    }
-
-    /**
-     * The shareholder assignments this user is a worker on.
-     *
-     * @return BelongsToMany<ProjectShareholder, $this>
-     */
-    public function assignedShareholders(): BelongsToMany
-    {
-        return $this->belongsToMany(ProjectShareholder::class, 'project_shareholder_user')->withTimestamps();
-    }
-
-    /**
-     * The expense receipts this worker has submitted.
-     *
-     * @return HasMany<Receipt, $this>
-     */
-    public function receipts(): HasMany
-    {
-        return $this->hasMany(Receipt::class);
+        return $this->role === UserRole::Viewer;
     }
 
     /**

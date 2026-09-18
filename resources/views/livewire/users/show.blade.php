@@ -40,7 +40,7 @@
                         <div>
                             <x-ui.select wire:model="role" :label="__('Role')" :disabled="$this->isSelf">
                                 @foreach (\App\Enums\UserRole::cases() as $role)
-                                    <option value="{{ $role->value }}">{{ __(ucfirst($role->value)) }}</option>
+                                    <option value="{{ $role->value }}">{{ $role->label() }}</option>
                                 @endforeach
                             </x-ui.select>
                             @if ($this->isSelf)
@@ -55,18 +55,9 @@
                                 class="cursor-not-allowed bg-zinc-50 text-zinc-500" />
                             <p class="mt-2 text-xs text-zinc-500">{{ __('The login email cannot be changed.') }}</p>
                         </div>
-
-                        <div>
-                            <x-ui.input wire:model="email_receiver" :label="__('Email recipient')" type="email" :placeholder="$email"
-                                autocomplete="off" />
-                            <p class="mt-2 text-xs text-zinc-500">
-                                {{ __('Optional. Notifications are sent here instead of the login email.') }}</p>
-                        </div>
                     </div>
 
                     <div class="grid grid-cols-2 gap-6">
-                        <x-ui.phone-input wire:model="phone" :label="__('Phone number')" autocomplete="off" />
-
                         <x-ui.select wire:model="locale" :label="__('Language')">
                             <option value="ko">{{ __('Korean') }}</option>
                             <option value="en">{{ __('English') }}</option>

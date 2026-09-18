@@ -38,6 +38,10 @@ class Docs extends Component
      * Defaults to the newest usable one, and is null — showing the placeholder —
      * only when there are none. Only the row id is held client-side; the secret
      * itself is resolved server-side on each render.
+     *
+     * Scoped by {@see ApiToken::scopeVisibleTo()}: an admin may pick any key, a
+     * viewer only one assigned to them, so the tester can never reveal another
+     * client's secret.
      */
     public ?int $tokenId = null;
 
@@ -193,6 +197,7 @@ class Docs extends Component
     {
         return ApiToken::query()
             ->active()
+            ->visibleTo(auth()->user())
             ->orderByDesc('id')
             ->get(['id', 'name', 'last_four', 'token'])
             ->filter(fn (ApiToken $token): bool => $token->token !== null)

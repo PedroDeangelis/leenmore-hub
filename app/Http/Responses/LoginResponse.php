@@ -9,21 +9,13 @@ use Symfony\Component\HttpFoundation\Response;
 class LoginResponse implements LoginResponseContract
 {
     /**
-     * Redirect by role: admin/office to the admin area, workers to the worker portal.
+     * Everyone lands on the API portal — it is the only destination here.
      *
      * @param  Request  $request
      * @return Response
      */
     public function toResponse($request)
     {
-        if ($request->wantsJson()) {
-            return response()->json(['two_factor' => false]);
-        }
-
-        return redirect()->intended(
-            $request->user()->role->worksInAdminArea()
-                ? route('dashboard')
-                : route('worker.dashboard')
-        );
+        return redirect()->intended(route('api.tokens'));
     }
 }

@@ -13,7 +13,7 @@
         <button type="button" x-on:click="sidebarOpen = true" class="text-zinc-600" aria-label="{{ __('Open menu') }}">
             <x-heroicon-o-bars-3 class="size-6" />
         </button>
-        <a href="{{ route('dashboard') }}" class="text-base font-semibold text-primary"
+        <a href="{{ route('api.tokens') }}" class="text-base font-semibold text-primary"
             wire:navigate>{{ config('app.name') }}</a>
     </header>
 
@@ -23,11 +23,11 @@
 
     <!-- Sidebar -->
     <aside
-        class="fixed inset-y-0  z-50 flex w-64 -translate-x-full flex-col border-e border-white/10 bg-primary transition-transform lg:translate-x-0"
+        class="fixed inset-y-0 z-50 flex w-64 -translate-x-full flex-col border-e border-white/10 bg-primary transition-transform lg:translate-x-0"
         x-bind:class="sidebarOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'">
         <div class="flex items-center justify-between px-5 pt-10 pb-4">
-            <a href="{{ route('dashboard') }}" class="block" wire:navigate>
-                <img src="{{ asset('images/logo-large.png') }}" alt="Leenmore Hub Logo" />
+            <a href="{{ route('api.tokens') }}" class="block" wire:navigate>
+                <img src="{{ asset('images/logo-large.png') }}" alt="{{ config('app.name') }}" />
             </a>
             <button type="button" x-on:click="sidebarOpen = false" class="text-white/70 lg:hidden"
                 aria-label="{{ __('Close menu') }}">
@@ -36,108 +36,35 @@
         </div>
 
         <nav class="flex-1 space-y-1 overflow-y-auto px-3 py-2">
-
-            <a href="{{ route('dashboard') }}" wire:navigate
-                class="flex items-center gap-3 rounded-lg px-3 py-3 transition text-sm font-medium {{ request()->routeIs('dashboard') ? 'bg-white/15 text-white' : 'text-white/80 hover:bg-white/10' }}">
-                <x-heroicon-o-home class="size-5" />
-                {{ __('Dashboard') }}
+            {{-- API portal: the parent links to token management; the submenu
+                 (one item per endpoint) expands whenever an API page is open. --}}
+            <a href="{{ route('api.tokens') }}" wire:navigate
+                class="flex items-center gap-3 rounded-lg px-3 py-3 transition text-sm font-medium {{ request()->routeIs('api.*') ? 'bg-white/15 text-white' : 'text-white/80 hover:bg-white/10' }}">
+                <x-heroicon-o-code-bracket class="size-5" />
+                {{ __('API') }}
             </a>
 
-            @can('view-projects')
-                <a href="{{ route('projects.index') }}" wire:navigate
-                    class="flex items-center gap-3 rounded-lg px-3 py-3 transition text-sm font-medium {{ request()->routeIs('projects.*') ? 'bg-white/15 text-white' : 'text-white/80 hover:bg-white/10' }}">
-                    <x-heroicon-o-megaphone class="size-5" />
-                    {{ __('Projects') }}
-                </a>
-            @endcan
-
-            @can('view-submissions')
-                <a href="{{ route('reports.index') }}" wire:navigate
-                    class="flex items-center gap-3 rounded-lg px-3 py-3 transition text-sm font-medium {{ request()->routeIs('reports.*') ? 'bg-white/15 text-white' : 'text-white/80 hover:bg-white/10' }}">
-                    <x-heroicon-o-document-chart-bar class="size-5" />
-                    {{ __('Reports') }}
-                </a>
-            @endcan
-
-            @can('edit-submissions')
-                <a href="{{ route('activity.index') }}" wire:navigate
-                    class="flex items-center gap-3 rounded-lg px-3 py-3 transition text-sm font-medium {{ request()->routeIs('activity.*') ? 'bg-white/15 text-white' : 'text-white/80 hover:bg-white/10' }}">
-                    <x-heroicon-o-pencil-square class="size-5" />
-                    {{ __('Activity reports') }}
-                </a>
-            @endcan
-
-            @can('view-activity-data')
-                <a href="{{ route('activity-data.index') }}" wire:navigate
-                    class="flex items-center gap-3 rounded-lg px-3 py-3 transition text-sm font-medium {{ request()->routeIs('activity-data.*') ? 'bg-white/15 text-white' : 'text-white/80 hover:bg-white/10' }}">
-                    <x-heroicon-o-chart-bar class="size-5" />
-                    {{ __('Activity data') }}
-                </a>
-            @endcan
-
-            @can('view-receipts')
-                <a href="{{ route('receipts.index') }}" wire:navigate
-                    class="flex items-center gap-3 rounded-lg px-3 py-3 transition text-sm font-medium {{ request()->routeIs('receipts.*') ? 'bg-white/15 text-white' : 'text-white/80 hover:bg-white/10' }}">
-                    <x-heroicon-o-receipt-percent class="size-5" />
-                    {{ __('Receipts') }}
-                </a>
-            @endcan
-
-            @can('manage-resources')
-                <a href="{{ route('resources.index') }}" wire:navigate
-                    class="flex items-center gap-3 rounded-lg px-3 py-3 transition text-sm font-medium {{ request()->routeIs('resources.*') ? 'bg-white/15 text-white' : 'text-white/80 hover:bg-white/10' }}">
-                    <x-heroicon-o-folder class="size-5" />
-                    {{ __('Project resources') }}
-                </a>
-            @endcan
-
-            @can('send-worker-emails')
-                <a href="{{ route('email-to-worker.index') }}" wire:navigate
-                    class="flex items-center gap-3 rounded-lg px-3 py-3 transition text-sm font-medium {{ request()->routeIs('email-to-worker.*') ? 'bg-white/15 text-white' : 'text-white/80 hover:bg-white/10' }}">
-                    <x-heroicon-o-envelope class="size-5" />
-                    {{ __('Email to worker') }}
-                </a>
-            @endcan
+            @if (request()->routeIs('api.*'))
+                <div class="ms-4 space-y-0.5 border-s border-white/10 ps-3">
+                    <a href="{{ route('api.tokens') }}" wire:navigate
+                        class="block rounded-lg px-3 py-2 text-xs font-medium transition {{ request()->routeIs('api.tokens') ? 'bg-white/15 text-white' : 'text-white/70 hover:bg-white/10' }}">
+                        {{ __('API access') }}
+                    </a>
+                    @foreach (\App\Support\ApiCatalog::all() as $slug => $endpoint)
+                        <a href="{{ route('api.docs', $slug) }}" wire:navigate
+                            class="block rounded-lg px-3 py-2 text-xs transition {{ request()->routeIs('api.docs') && request()->route('endpoint') === $slug ? 'bg-white/15 text-white' : 'text-white/70 hover:bg-white/10' }}">
+                            <span class="me-1.5 font-mono text-[10px] text-white/50">{{ $endpoint['method'] }}</span>
+                            {{ $endpoint['title'] }}
+                        </a>
+                    @endforeach
+                </div>
+            @endif
 
             @can('manage-users')
                 <a href="{{ route('users.index') }}" wire:navigate
                     class="flex items-center gap-3 rounded-lg px-3 py-3 transition text-sm font-medium {{ request()->routeIs('users.*') ? 'bg-white/15 text-white' : 'text-white/80 hover:bg-white/10' }}">
                     <x-heroicon-o-users class="size-5" />
                     {{ __('Users') }}
-                </a>
-            @endcan
-
-            @can('manage-api-tokens')
-                {{-- API portal: the parent links to token management; the submenu
-                     (one item per endpoint) expands whenever an API page is open. --}}
-                <a href="{{ route('api.tokens') }}" wire:navigate
-                    class="flex items-center gap-3 rounded-lg px-3 py-3 transition text-sm font-medium {{ request()->routeIs('api.*') ? 'bg-white/15 text-white' : 'text-white/80 hover:bg-white/10' }}">
-                    <x-heroicon-o-code-bracket class="size-5" />
-                    {{ __('API') }}
-                </a>
-
-                @if (request()->routeIs('api.*'))
-                    <div class="ms-4 space-y-0.5 border-s border-white/10 ps-3">
-                        <a href="{{ route('api.tokens') }}" wire:navigate
-                            class="block rounded-lg px-3 py-2 text-xs font-medium transition {{ request()->routeIs('api.tokens') ? 'bg-white/15 text-white' : 'text-white/70 hover:bg-white/10' }}">
-                            {{ __('API access') }}
-                        </a>
-                        @foreach (\App\Support\ApiCatalog::all() as $slug => $endpoint)
-                            <a href="{{ route('api.docs', $slug) }}" wire:navigate
-                                class="block rounded-lg px-3 py-2 text-xs transition {{ request()->routeIs('api.docs') && request()->route('endpoint') === $slug ? 'bg-white/15 text-white' : 'text-white/70 hover:bg-white/10' }}">
-                                <span class="me-1.5 font-mono text-[10px] text-white/50">{{ $endpoint['method'] }}</span>
-                                {{ $endpoint['title'] }}
-                            </a>
-                        @endforeach
-                    </div>
-                @endif
-            @endcan
-
-            @can('manage-settings')
-                <a href="{{ route('options.edit') }}" wire:navigate
-                    class="flex items-center gap-3 rounded-lg px-3 py-3 transition text-sm font-medium {{ request()->routeIs('options.*') ? 'bg-white/15 text-white' : 'text-white/80 hover:bg-white/10' }}">
-                    <x-heroicon-o-cog-6-tooth class="size-5" />
-                    {{ __('Options') }}
                 </a>
             @endcan
         </nav>

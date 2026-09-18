@@ -14,7 +14,7 @@ use Illuminate\Support\Str;
  * is kept encrypted so the management page can reveal it on demand. Tokens from
  * before the encrypted column existed have a null `token` and cannot be re-shown.
  */
-#[Fillable(['name', 'token_hash', 'token', 'last_four', 'expires_at', 'revoked_at', 'created_by'])]
+#[Fillable(['name', 'token_hash', 'token', 'last_four', 'expires_at', 'revoked_at', 'created_by', 'assigned_to'])]
 class ApiToken extends Model
 {
     protected function casts(): array
@@ -34,7 +34,7 @@ class ApiToken extends Model
      *
      * @return array{token: self, plainText: string}
      */
-    public static function generate(string $name, ?int $createdBy = null, ?\DateTimeInterface $expiresAt = null): array
+    public static function generate(string $name, ?int $createdBy = null, ?\DateTimeInterface $expiresAt = null, ?int $assignedTo = null): array
     {
         // Prefixed so a leaked token is greppable and obviously ours.
         $plainText = 'lmh_'.Str::random(48);
@@ -46,6 +46,7 @@ class ApiToken extends Model
             'last_four' => Str::substr($plainText, -4),
             'expires_at' => $expiresAt,
             'created_by' => $createdBy,
+            'assigned_to' => $assignedTo,
         ]);
 
         return ['token' => $token, 'plainText' => $plainText];
@@ -106,5 +107,30 @@ class ApiToken extends Model
     public function creator(): BelongsTo
     {
         return $this->belongsTo(User::class, 'created_by');
+    }
+
+    /**
+     * The portal account this key belongs to, if any. Null is the common case —
+     * a key issued to an outside consumer who has no login here.
+     *
+     * @return BelongsTo<User, $this>
+     */
+    public function assignee(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'assigned_to');
+    }
+
+    /**
+     * Narrow to the tokens a given user may see and test with: everything for an
+     * admin, only their own assigned keys for anyone else.
+     *
+     * This is the data-exposure boundary behind the docs tester — a viewer must
+     * never be handed another client's key.
+     */
+    public function scopeVisibleTo(Builder $query, User $user): void
+    {
+        if (! $user->isAdmin()) {
+            $query->where('assigned_to', $user->id);
+        }
     }
 }

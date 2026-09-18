@@ -58,11 +58,4 @@ class ApiController extends Controller
 
         return response()->json(ApiData::receipts($params));
     }
-
-    public function users(Request $request): JsonResponse
-    {
-        $params = $request->validate(ApiCatalog::queryRules('users'));
-
-        return response()->json(ApiData::users($params));
-    }
 }

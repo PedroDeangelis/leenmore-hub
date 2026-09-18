@@ -5,14 +5,14 @@ use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
 
 /*
- * Bearer tokens for the read-only REST API (routes/api.php). An admin mints one
- * on the API tab, labels it with who it is for, hands the plaintext to that
- * client once, and can revoke or delete it later. Only the SHA-256 hash is
- * stored — the plaintext is shown exactly once, at creation, and never again.
+ * Bearer tokens for the read-only REST API (routes/api.php). An admin mints one,
+ * labels it with who it is for, hands the plaintext to that client, and can
+ * revoke or delete it later.
  *
- * Distinct from Passport's oauth_* tables, which back the MCP server's OAuth
- * flow. This is deliberately a plain first-party token so the management UI can
- * own the full label/revoke/delete lifecycle without OAuth machinery.
+ * Both the hash and an encrypted copy of the plaintext are stored: the hash is
+ * the lookup key for authentication, the encrypted copy only ever decrypted for
+ * display on the management page so an admin can retrieve a key they already
+ * issued.
  */
 return new class extends Migration
 {
@@ -24,8 +24,11 @@ return new class extends Migration
             // Who the token is for — free text an admin types, e.g. "회계법인 김앤장".
             $table->string('name');
 
-            // SHA-256 of the plaintext; the plaintext itself is never stored.
+            // SHA-256 of the plaintext; the authentication lookup key.
             $table->string('token_hash', 64)->unique();
+
+            // The plaintext, encrypted with APP_KEY, for re-display only.
+            $table->text('token')->nullable();
 
             // Last four plaintext characters, for recognising a token in the list.
             $table->string('last_four', 4);
@@ -37,6 +40,14 @@ return new class extends Migration
             $table->timestamp('revoked_at')->nullable();
 
             $table->foreignId('created_by')->nullable()->constrained('users')->nullOnDelete();
+
+            /*
+             * The portal account this key belongs to, if any. A viewer may only
+             * see and test with keys assigned to them; admins see every key.
+             * Null means the key belongs to an outside consumer with no login
+             * here, which is the common case.
+             */
+            $table->foreignId('assigned_to')->nullable()->constrained('users')->nullOnDelete();
 
             $table->timestamps();
         });

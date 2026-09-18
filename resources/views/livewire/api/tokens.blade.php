@@ -7,10 +7,12 @@
             </p>
         </div>
 
-        <x-ui.button wire:click="$set('showCreate', true)">
-            <x-heroicon-o-plus class="size-4" />
-            {{ __('Create token') }}
-        </x-ui.button>
+        @can('manage-api-tokens')
+            <x-ui.button wire:click="$set('showCreate', true)">
+                <x-heroicon-o-plus class="size-4" />
+                {{ __('Create token') }}
+            </x-ui.button>
+        @endcan
     </div>
 
     {{-- One-time plaintext reveal. Shown once, right after creation. --}}
@@ -45,6 +47,7 @@
             <x-ui.table.heading>{{ __('For') }}</x-ui.table.heading>
             <x-ui.table.heading>{{ __('Token') }}</x-ui.table.heading>
             <x-ui.table.heading>{{ __('Status') }}</x-ui.table.heading>
+            <x-ui.table.heading>{{ __('Assigned to') }}</x-ui.table.heading>
             <x-ui.table.heading>{{ __('Created by') }}</x-ui.table.heading>
             <x-ui.table.heading>{{ __('Created') }}</x-ui.table.heading>
             <x-ui.table.heading>{{ __('Expires') }}</x-ui.table.heading>
@@ -85,6 +88,7 @@
                         {{ __(ucfirst($status)) }}
                     </x-ui.badge>
                 </x-ui.table.cell>
+                <x-ui.table.cell class="text-zinc-600">{{ $token->assignee?->name ?? '—' }}</x-ui.table.cell>
                 <x-ui.table.cell class="text-zinc-600">{{ $token->creator?->name ?? '—' }}</x-ui.table.cell>
                 <x-ui.table.cell class="text-zinc-600">{{ $token->created_at?->format('Y/m/d') }}</x-ui.table.cell>
                 <x-ui.table.cell class="text-zinc-600">{{ $token->expires_at?->format('Y/m/d') ?? __('Never') }}</x-ui.table.cell>
@@ -92,20 +96,24 @@
                     {{ $token->last_used_at?->diffForHumans() ?? __('Never') }}
                 </x-ui.table.cell>
                 <x-ui.table.cell>
-                    <div class="flex items-center gap-3">
-                        @unless ($token->isRevoked())
-                            <button type="button" wire:click="revoke({{ $token->id }})"
-                                wire:confirm="{{ __('Block this token? It will stop working immediately.') }}"
-                                class="text-orange-600 hover:underline">{{ __('Block') }}</button>
-                        @endunless
-                        <button type="button" wire:click="delete({{ $token->id }})"
-                            wire:confirm="{{ __('Delete this token permanently?') }}"
-                            class="text-red-600 hover:underline">{{ __('Delete') }}</button>
-                    </div>
+                    @can('manage-api-tokens')
+                        <div class="flex items-center gap-3">
+                            @unless ($token->isRevoked())
+                                <button type="button" wire:click="revoke({{ $token->id }})"
+                                    wire:confirm="{{ __('Block this token? It will stop working immediately.') }}"
+                                    class="text-orange-600 hover:underline">{{ __('Block') }}</button>
+                            @endunless
+                            <button type="button" wire:click="delete({{ $token->id }})"
+                                wire:confirm="{{ __('Delete this token permanently?') }}"
+                                class="text-red-600 hover:underline">{{ __('Delete') }}</button>
+                        </div>
+                    @else
+                        <span class="text-zinc-400">—</span>
+                    @endcan
                 </x-ui.table.cell>
             </tr>
         @empty
-            <x-ui.table.empty :cols="8">{{ __('No tokens yet.') }}</x-ui.table.empty>
+            <x-ui.table.empty :cols="9">{{ __('No tokens yet.') }}</x-ui.table.empty>
         @endforelse
     </x-ui.table>
 
@@ -125,6 +133,17 @@
                 :placeholder="__('e.g. 회계법인 김앤장')" required autofocus />
 
             <x-ui.input wire:model="expires_at" type="date" :label="__('Expires on (optional)')" />
+
+            <div>
+                <x-ui.select wire:model="assigned_to" :label="__('Assign to a portal account (optional)')">
+                    <option value="">{{ __('Not assigned — for an outside client') }}</option>
+                    @foreach ($assignableUsers as $assignable)
+                        <option value="{{ $assignable->id }}">{{ $assignable->name }} ({{ $assignable->email }})</option>
+                    @endforeach
+                </x-ui.select>
+                <p class="mt-2 text-xs text-zinc-500">
+                    {{ __('A viewer can only see and test with the tokens assigned to them.') }}</p>
+            </div>
 
             <div class="flex justify-end gap-3">
                 <x-ui.button type="button" variant="outline" wire:click="$set('showCreate', false)">
