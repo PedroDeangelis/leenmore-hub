@@ -2,7 +2,9 @@
 
 namespace App\Livewire\Api;
 
+use App\Models\ApiToken;
 use App\Support\ApiCatalog;
+use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Support\Arr;
 use Illuminate\View\View;
 use Livewire\Attributes\Locked;
@@ -17,7 +19,10 @@ use Livewire\Component;
  *
  * The tester runs the endpoint's query in-process (the admin is already
  * authorised in the dashboard and sees the same masked data), so it needs no
- * token; the curl example is the real external call, with a token placeholder.
+ * token; the curl example is the real external call. Its Authorization header
+ * shows a placeholder until one of the existing API tokens is picked, at which
+ * point the real secret is substituted so the command runs as pasted — the same
+ * admins can already reveal any token's plaintext on the API access page.
  */
 #[Title('API endpoint')]
 class Docs extends Component
@@ -27,6 +32,14 @@ class Docs extends Component
 
     /** @var array<string, mixed> Form values, keyed by parameter name. */
     public array $params = [];
+
+    /**
+     * The API token whose secret fills the curl example's Authorization header.
+     * Defaults to the newest usable one, and is null — showing the placeholder —
+     * only when there are none. Only the row id is held client-side; the secret
+     * itself is resolved server-side on each render.
+     */
+    public ?int $tokenId = null;
 
     /** Pretty-printed JSON of the last test run, or null before one. */
     public ?string $result = null;
@@ -40,6 +53,10 @@ class Docs extends Component
         }
 
         $this->endpoint = $endpoint;
+
+        // Preselect the newest usable token — the one an admin has almost always
+        // just minted for whatever they are about to call.
+        $this->tokenId = $this->selectableTokens()->first()?->id;
     }
 
     /**
@@ -154,21 +171,42 @@ class Docs extends Component
     public function render(): View
     {
         $definition = ApiCatalog::find($this->endpoint);
+        $tokens = $this->selectableTokens();
 
         return view('livewire.api.docs', [
             'definition' => $definition,
-            'curl' => $this->curlExample($definition),
+            'curl' => $this->curlExample($definition, $tokens),
             'endpoints' => ApiCatalog::all(),
+            'tokens' => $tokens,
         ]);
     }
 
     /**
+     * The tokens offerable in the picker: working ones whose plaintext is still
+     * recoverable. Revoked and expired tokens would only produce a curl command
+     * that fails, and tokens minted before the encrypted column existed have no
+     * plaintext to substitute at all.
+     *
+     * @return Collection<int, ApiToken>
+     */
+    private function selectableTokens(): Collection
+    {
+        return ApiToken::query()
+            ->active()
+            ->orderByDesc('id')
+            ->get(['id', 'name', 'last_four', 'token'])
+            ->filter(fn (ApiToken $token): bool => $token->token !== null)
+            ->values();
+    }
+
+    /**
      * A copy-pasteable curl command for the real HTTP endpoint, with the path
-     * params filled from the form and a token placeholder.
+     * params filled from the form and either the picked token or a placeholder.
      *
      * @param  array<string, mixed>  $definition
+     * @param  Collection<int, ApiToken>  $tokens
      */
-    private function curlExample(array $definition): string
+    private function curlExample(array $definition, Collection $tokens): string
     {
         $path = $definition['path'];
         $query = [];
@@ -193,6 +231,10 @@ class Docs extends Component
             $url .= '?'.Arr::query($query);
         }
 
-        return "curl '{$url}' \\\n  -H 'Authorization: Bearer YOUR_TOKEN'";
+        // Resolved from the offerable set, so a tampered id can never reach a
+        // token the picker itself would not show.
+        $token = $tokens->firstWhere('id', $this->tokenId)?->token ?? 'YOUR_TOKEN';
+
+        return "curl '{$url}' \\\n  -H 'Authorization: Bearer {$token}'";
     }
 }

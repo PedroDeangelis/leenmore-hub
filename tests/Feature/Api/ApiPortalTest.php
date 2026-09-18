@@ -161,6 +161,110 @@ class ApiPortalTest extends TestCase
             ->assertSet('resultStatus', 404);
     }
 
+    public function test_the_curl_example_follows_the_tester_fields_without_running_the_request(): void
+    {
+        $admin = User::factory()->admin()->create();
+
+        $component = Livewire::actingAs($admin)->test(Docs::class, ['endpoint' => 'projects'])
+            ->set('params.search', 'Spring');
+
+        // Updated by the field alone — no 'run' call, so no validation errors and
+        // no response rendered yet.
+        $this->assertStringContainsString('search=Spring', $component->html());
+        $component->assertHasNoErrors()->assertSet('result', null);
+    }
+
+    public function test_a_path_param_typed_into_the_tester_lands_in_the_curl_url(): void
+    {
+        $admin = User::factory()->admin()->create();
+        $project = Project::factory()->create();
+
+        $component = Livewire::actingAs($admin)->test(Docs::class, ['endpoint' => 'project'])
+            ->set('params.project', (string) $project->id);
+
+        // The id lands in the curl URL; the unfilled {project} placeholder survives
+        // only in the static path shown in the page header.
+        $this->assertStringContainsString('/api/v1/projects/'.$project->id, $component->html());
+    }
+
+    public function test_the_curl_example_offers_a_jq_pipe_that_is_on_by_default(): void
+    {
+        $html = Livewire::actingAs(User::factory()->admin()->create())
+            ->test(Docs::class, ['endpoint' => 'projects'])->html();
+
+        // Toggled client-side by Alpine, and inside the copied element so the
+        // pipe travels with the command.
+        $this->assertStringContainsString('x-model="jq"', $html);
+        $this->assertStringContainsString('checked', $html);
+        $this->assertStringContainsString('<span x-show="jq"> | jq</span></code></pre>', $html);
+        $this->assertStringContainsString('jq: true', $html);
+    }
+
+    public function test_the_newest_usable_token_is_preselected(): void
+    {
+        $admin = User::factory()->admin()->create();
+        ['plainText' => $older] = ApiToken::generate('Older', $admin->id);
+        ['token' => $newest, 'plainText' => $newer] = ApiToken::generate('Newer', $admin->id);
+
+        Livewire::actingAs($admin)->test(Docs::class, ['endpoint' => 'projects'])
+            ->assertSet('tokenId', $newest->id)
+            ->assertSee('Bearer '.$newer)
+            ->assertDontSee($older)
+            ->assertDontSee('Bearer YOUR_TOKEN');
+    }
+
+    public function test_the_curl_example_falls_back_to_the_placeholder_with_no_usable_tokens(): void
+    {
+        Livewire::actingAs(User::factory()->admin()->create())->test(Docs::class, ['endpoint' => 'projects'])
+            ->assertSet('tokenId', null)
+            ->assertSee('Bearer YOUR_TOKEN');
+    }
+
+    public function test_the_picker_can_be_set_back_to_the_placeholder(): void
+    {
+        $admin = User::factory()->admin()->create();
+        ['plainText' => $plain] = ApiToken::generate('Client', $admin->id);
+
+        Livewire::actingAs($admin)->test(Docs::class, ['endpoint' => 'projects'])
+            ->assertSee('Bearer '.$plain)
+            ->set('tokenId', null)
+            ->assertSee('Bearer YOUR_TOKEN')
+            ->assertDontSee($plain);
+    }
+
+    public function test_the_token_picker_offers_only_usable_tokens(): void
+    {
+        $admin = User::factory()->admin()->create();
+
+        ['token' => $usable] = ApiToken::generate('Usable', $admin->id);
+        ['token' => $revoked] = ApiToken::generate('Revoked', $admin->id);
+        $revoked->update(['revoked_at' => now()]);
+        ['token' => $expired] = ApiToken::generate('Expired', $admin->id);
+        $expired->forceFill(['expires_at' => now()->subDay()])->save();
+        ['token' => $legacy] = ApiToken::generate('Legacy', $admin->id);
+        $legacy->update(['token' => null]);
+
+        $html = Livewire::actingAs($admin)->test(Docs::class, ['endpoint' => 'projects'])->html();
+
+        $this->assertStringContainsString('Usable', $html);
+        $this->assertStringNotContainsString('Revoked', $html);
+        $this->assertStringNotContainsString('Expired', $html);
+        $this->assertStringNotContainsString('Legacy', $html);
+        $this->assertStringContainsString('value="'.$usable->id.'"', $html);
+    }
+
+    public function test_picking_an_unusable_token_falls_back_to_the_placeholder(): void
+    {
+        $admin = User::factory()->admin()->create();
+        ['token' => $revoked, 'plainText' => $plain] = ApiToken::generate('Revoked', $admin->id);
+        $revoked->update(['revoked_at' => now()]);
+
+        Livewire::actingAs($admin)->test(Docs::class, ['endpoint' => 'projects'])
+            ->set('tokenId', $revoked->id)
+            ->assertSee('Bearer YOUR_TOKEN')
+            ->assertDontSee($plain);
+    }
+
     public function test_every_catalog_endpoint_has_a_reachable_docs_page(): void
     {
         $admin = User::factory()->admin()->create();

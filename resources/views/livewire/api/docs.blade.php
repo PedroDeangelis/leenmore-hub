@@ -37,16 +37,49 @@
                 @endif
             </x-ui.card>
 
-            <x-ui.card class="p-5">
+            <x-ui.card class="p-5" x-data="{ copied: false, jq: true }">
                 <div class="flex items-center justify-between">
                     <h2 class="text-sm font-semibold text-zinc-900">{{ __('Example request') }}</h2>
-                    <button type="button" class="text-xs text-primary hover:underline" x-data
-                        x-on:click="navigator.clipboard.writeText($refs.curl.textContent.trim())"
-                        x-ref="btn">{{ __('Copy') }}</button>
+                    <button type="button" class="text-xs text-primary hover:underline"
+                        x-on:click="navigator.clipboard.writeText($refs.curl.textContent.trim()); copied = true; setTimeout(() => copied = false, 2000)">
+                        <span x-show="!copied">{{ __('Copy') }}</span>
+                        <span x-show="copied" x-cloak class="text-green-600">{{ __('Copied') }}</span>
+                    </button>
                 </div>
-                <pre class="mt-2 overflow-x-auto rounded-lg bg-zinc-900 p-3 text-xs leading-relaxed text-zinc-100"><code x-ref="curl">{{ $curl }}</code></pre>
+                <div class="mt-3 grid grid-cols-2 items-end gap-3">
+                    @if ($tokens->isNotEmpty())
+                        <div>
+                            <label class="form-label text-xs" for="curl-token">{{ __('Token') }}</label>
+                            <select wire:model.live="tokenId" id="curl-token" class="form-select mt-1 py-2 text-xs">
+                                <option value="">{{ __('YOUR_TOKEN (placeholder)') }}</option>
+                                @foreach ($tokens as $token)
+                                    <option value="{{ $token->id }}">{{ $token->name }}
+                                        (…{{ $token->last_four }})
+                                    </option>
+                                @endforeach
+                            </select>
+                        </div>
+                    @else
+                        <div></div>
+                    @endif
+
+                    <div class="pb-2.5 flex items-center justify-end">
+                        <x-ui.checkbox x-model="jq" checked :label="__('Beautify Code')" />
+                    </div>
+                </div>
+
+                {{-- The jq suffix lives inside the copied element so it travels with the command. --}}
+                <pre class="mt-2 overflow-x-auto rounded-lg bg-zinc-900 p-3 text-xs leading-relaxed text-zinc-100"><code x-ref="curl">{{ $curl }}<span x-show="jq"> | jq</span></code></pre>
                 <p class="mt-2 text-xs text-zinc-500">
-                    {{ __('Replace YOUR_TOKEN with a token from the API access page.') }}
+                    @if ($tokens->isNotEmpty())
+                        {{ __('Pick a token to fill it into the command, or manage tokens on the') }}
+                        <a href="{{ route('api.tokens') }}" wire:navigate
+                            class="text-primary hover:underline">{{ __('API access page') }}</a>.
+                    @else
+                        {{ __('Replace YOUR_TOKEN with a token from the') }}
+                        <a href="{{ route('api.tokens') }}" wire:navigate
+                            class="text-primary hover:underline">{{ __('API access page') }}</a>.
+                    @endif
                 </p>
             </x-ui.card>
         </div>
@@ -64,16 +97,23 @@
                         <div class="space-y-1">
                             <label class="form-label">
                                 {{ $param['name'] }}
-                                @if ($param['required'])<span class="text-red-500">*</span>@endif
+                                @if ($param['required'])
+                                    <span class="text-red-500">*</span>
+                                @endif
                             </label>
 
                             @if (($param['input'] ?? null) === 'date-list')
                                 <div class="space-y-2">
                                     @foreach ($params[$param['name']] ?? [] as $index => $day)
-                                        <div class="flex items-center gap-2" wire:key="{{ $param['name'] }}-row-{{ $index }}">
-                                            <input type="date" wire:model="params.{{ $param['name'] }}.{{ $index }}" class="form-input flex-1" />
-                                            <button type="button" wire:click="removeListItem('{{ $param['name'] }}', {{ $index }})"
-                                                title="{{ __('Remove') }}" class="shrink-0 text-zinc-400 hover:text-red-600">
+                                        <div class="flex items-center gap-2"
+                                            wire:key="{{ $param['name'] }}-row-{{ $index }}">
+                                            <input type="date"
+                                                wire:model.live="params.{{ $param['name'] }}.{{ $index }}"
+                                                class="form-input flex-1" />
+                                            <button type="button"
+                                                wire:click="removeListItem('{{ $param['name'] }}', {{ $index }})"
+                                                title="{{ __('Remove') }}"
+                                                class="shrink-0 text-zinc-400 hover:text-red-600">
                                                 <x-heroicon-o-x-mark class="size-4" />
                                             </button>
                                         </div>
@@ -85,24 +125,25 @@
                                         {{ __('Add date') }}
                                     </button>
                                 </div>
-                            @elseif (! empty($param['options']))
-                                <select wire:model="params.{{ $param['name'] }}" class="form-input">
+                            @elseif (!empty($param['options']))
+                                <select wire:model.live="params.{{ $param['name'] }}" class="form-input">
                                     <option value="">{{ __('(any)') }}</option>
                                     @foreach ($param['options'] as $option)
                                         <option value="{{ $option }}">{{ $option }}</option>
                                     @endforeach
                                 </select>
                             @elseif ($param['type'] === 'integer')
-                                <input type="number" wire:model="params.{{ $param['name'] }}" class="form-input"
-                                    placeholder="{{ $param['example'] ?? '' }}" />
+                                <input type="number" wire:model.live.debounce.400ms="params.{{ $param['name'] }}"
+                                    class="form-input" placeholder="{{ $param['example'] ?? '' }}" />
                             @elseif ($param['type'] === 'date')
-                                <input type="date" wire:model="params.{{ $param['name'] }}" class="form-input" />
+                                <input type="date" wire:model.live="params.{{ $param['name'] }}"
+                                    class="form-input" />
                             @else
-                                <input type="text" wire:model="params.{{ $param['name'] }}" class="form-input"
-                                    placeholder="{{ $param['example'] ?? '' }}" />
+                                <input type="text" wire:model.live.debounce.400ms="params.{{ $param['name'] }}"
+                                    class="form-input" placeholder="{{ $param['example'] ?? '' }}" />
                             @endif
 
-                            @error('params.'.$param['name'])
+                            @error('params.' . $param['name'])
                                 <p class="form-error">{{ $message }}</p>
                             @enderror
                         </div>
