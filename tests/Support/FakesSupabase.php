@@ -66,6 +66,10 @@ trait FakesSupabase
                 'Content-Range' => '0-0/1',
             ]),
 
+            // Before the roster catch-all: the first matching stub answers, and
+            // only the e-proxy lookup selects this column.
+            'https://example.supabase.co/rest/v1/shareholder*api_recipient_completion_date*' => Http::response($this->fakeEproxies()),
+
             'https://example.supabase.co/rest/v1/shareholder*' => Http::response($this->fakeRoster(), 200, [
                 'Content-Range' => '0-1/2',
             ]),
@@ -134,6 +138,31 @@ trait FakesSupabase
     }
 
     /**
+     * Roster rows eSignon has written a completed e-proxy onto, newest first.
+     * The last one's contact is whitespace only: it passes upstream's non-empty
+     * filter but is not a completion.
+     *
+     * @return list<array<string, mixed>>
+     */
+    protected function fakeEproxies(): array
+    {
+        return [
+            [
+                'id' => 1003, 'project_id' => 207, 'user' => [],
+                'api_recipient_contact' => '010-3333-4444', 'api_recipient_completion_date' => '2026-09-20 10:00:00',
+            ],
+            [
+                'id' => 1001, 'project_id' => 207, 'user' => ['김활동'],
+                'api_recipient_contact' => '010-5555-6666', 'api_recipient_completion_date' => '2026-09-15 14:49:45',
+            ],
+            [
+                'id' => 1004, 'project_id' => 207, 'user' => ['김활동'],
+                'api_recipient_contact' => '   ', 'api_recipient_completion_date' => '2026-09-14 09:00:00',
+            ],
+        ];
+    }
+
+    /**
      * @return list<array<string, mixed>>
      */
     protected function fakeSubmissions(): array
@@ -143,12 +172,14 @@ trait FakesSupabase
                 'id' => 5001, 'project_id' => 207, 'shareholder_id' => 1001,
                 'user_id' => '11111111-1111-1111-1111-111111111111', 'user_name' => '김활동',
                 'date' => '2026-09-15T00:00:00+00:00', 'result' => '0', 'contact_worker' => '010-1111-2222',
+                // Workers type contact details into the note; the API must not return them.
+                'note' => '본인 010-9876-5432 통화, 2,720,000주 위임. 배우자 780913-2345678 kim@example.com',
                 'files' => ['a.jpg'], 'privacy_consent_file' => [], 'created_at' => '2026-09-15T01:00:00+00:00',
             ],
             [
                 'id' => 5002, 'project_id' => 207, 'shareholder_id' => 1002,
                 'user_id' => '11111111-1111-1111-1111-111111111111', 'user_name' => '김활동',
-                'date' => '2026-09-16T00:00:00+00:00', 'result' => '2', 'contact_worker' => null,
+                'date' => '2026-09-16T00:00:00+00:00', 'result' => '2', 'contact_worker' => null, 'note' => null,
                 'files' => [], 'privacy_consent_file' => ['c.pdf'], 'created_at' => '2026-09-16T01:00:00+00:00',
             ],
         ];

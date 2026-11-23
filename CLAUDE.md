@@ -60,7 +60,8 @@ never writes to it. Rules when touching it:
   made across all six endpoints is a GET — keep that true.
 - **Route personal data through `App\Support\Pii`.** 실명번호 is masked, contact numbers are never
   returned (only whether one exists), addresses are cut to their region, and the free-text
-  `submission.note` is never selected — workers type phone numbers into it.
+  `submission.note` leaves only through `Pii::note()`, which replaces phone numbers, 실명번호 and
+  emails with placeholders — workers type phone numbers into it.
 - **Never read a roster unpaginated.** `shareholder` holds ~1.45M rows; an unbounded select against
   it takes the API down rather than merely being slow.
 

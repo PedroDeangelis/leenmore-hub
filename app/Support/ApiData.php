@@ -26,13 +26,20 @@ use Illuminate\Support\Carbon;
  * uuids on submissions but names on shareholder rows ({@see ProfileRepository}).
  *
  * Personal data goes through {@see Pii} on the way out: 실명번호 masked, contacts
- * reported only as present-or-not, and free-text notes never returned at all.
+ * reported only as present-or-not, and free-text notes returned with phone numbers,
+ * 실명번호 and emails redacted.
  */
 final class ApiData
 {
     private const PER_PAGE_DEFAULT = 50;
 
     private const PER_PAGE_MAX = 200;
+
+    /**
+     * The 판단 an electronic proxy (전자위임) is reported under. It has no entry in
+     * any project's option list; the name is the one the client's admin shows.
+     */
+    private const ESIGNON_RESULT = '위임(전자위임)';
 
     /**
      * @param  array<string, mixed>  $params
@@ -153,10 +160,7 @@ final class ApiData
         }
 
         if (filled($params['worker_id'] ?? null)) {
-            // Roster assignment is by worker *name*, so translate the uuid.
-            $name = self::profileRepository()->nameFor((string) $params['worker_id']);
-
-            $filters['user'] = $name === null ? 'cs.{__no_such_worker__}' : 'cs.{'.$name.'}';
+            $filters['user'] = self::workerNameFilter((string) $params['worker_id']);
         }
 
         if (filled($params['search'] ?? null)) {
@@ -215,18 +219,36 @@ final class ApiData
             $filters['and'] = '(date.lte.'.$params['to'].'T23:59:59)';
         }
 
+        $result = $params['result'] ?? null;
+        $onlyEproxies = $result === self::ESIGNON_RESULT;
+
+        // 전자위임 join only a project-scoped list: across all projects the
+        // lookup is a full scan of the roster.
+        $eproxies = filled($params['project_id'] ?? null) && (blank($result) || $onlyEproxies)
+            ? self::eproxies((int) $params['project_id'], $params)
+            : [];
+
         [$page, $perPage] = self::pageParams($params);
-        $result = self::submissionRepository()->paginate($filters, $page, $perPage);
+        $offset = ($page - 1) * $perPage;
+
+        // At most count($eproxies) rows ahead of this page are e-proxies, so every
+        // report that can land on it sits at or after $start.
+        $start = max(0, $offset - count($eproxies));
+
+        $reports = $onlyEproxies
+            ? ['rows' => [], 'total' => 0]
+            : self::submissionRepository()->slice($filters, $start, $offset + $perPage - $start);
 
         // Judgment names are per-project, so decode each project's option list
         // once rather than per row.
-        $resultSets = self::resultSetsFor(array_column($result['rows'], 'project_id'));
+        $resultSets = self::resultSetsFor(array_column($reports['rows'], 'project_id'));
 
         $rows = array_map(static function (array $row) use ($resultSets): array {
             $judgment = ($resultSets[(int) $row['project_id']] ?? null)?->resolve($row['result'] ?? null);
 
             return [
                 'id' => (int) $row['id'],
+                'source' => 'worker',
                 'date' => self::date($row['date'] ?? null),
                 // One legacy row upstream has no project; report that rather
                 // than casting it to a project 0 that does not exist.
@@ -240,17 +262,104 @@ final class ApiData
                 'has_contact' => Pii::hasContact($row['contact_worker'] ?? null),
                 'privacy_consent' => filled($row['privacy_consent_file'] ?? null),
                 'file_count' => count($row['files'] ?? []),
+                'note' => Pii::note($row['note'] ?? null),
             ];
-        }, $result['rows']);
+        }, $reports['rows']);
 
         // The endpoint documents a `result` filter by judgment *name*, which
         // upstream cannot express — indices differ per project — so it is applied
         // after decoding. It therefore narrows the page, not the total.
-        if (filled($params['result'] ?? null)) {
-            $rows = array_values(array_filter($rows, static fn (array $r): bool => $r['result'] === $params['result']));
+        if (filled($result) && ! $onlyEproxies) {
+            $rows = array_values(array_filter($rows, static fn (array $r): bool => $r['result'] === $result));
         }
 
-        return self::envelope($rows, $result['total'], $page, $perPage);
+        return self::envelope(
+            array_slice(self::mergeByDay($rows, $eproxies), $offset - $start, $perPage),
+            $reports['total'] + count($eproxies),
+            $page,
+            $perPage,
+        );
+    }
+
+    /**
+     * A project's 전자위임, shaped as activity reports, newest first.
+     *
+     * They are not rows in `submission` — eSignon records them on the roster row
+     * — so they carry no id of their own; `source` and `shareholder_id` identify
+     * them. The signer's contact is reported only as present.
+     *
+     * @param  array<string, mixed>  $params
+     * @return list<array<string, mixed>>
+     */
+    private static function eproxies(int $projectId, array $params): array
+    {
+        $filters = [];
+        $bounds = [];
+
+        // The completion time is text ("2026-09-24 02:13:08"), so the bounds are
+        // compared as strings: from the start of `from` to before the day after `to`.
+        if (filled($params['from'] ?? null)) {
+            $bounds[] = 'api_recipient_completion_date.gte.'.Carbon::parse($params['from'])->toDateString();
+        }
+
+        if (filled($params['to'] ?? null)) {
+            $bounds[] = 'api_recipient_completion_date.lt.'.Carbon::parse($params['to'])->addDay()->toDateString();
+        }
+
+        if ($bounds !== []) {
+            $filters['and'] = '('.implode(',', $bounds).')';
+        }
+
+        if (filled($params['worker_id'] ?? null)) {
+            $filters['user'] = self::workerNameFilter((string) $params['worker_id']);
+        }
+
+        return array_map(static fn (array $row): array => [
+            'id' => null,
+            'source' => 'esignon',
+            'date' => self::date($row['api_recipient_completion_date']),
+            'project_id' => (int) $row['project_id'],
+            'shareholder_id' => (int) $row['id'],
+            // The roster names its workers; it holds no profile uuid to report.
+            'worker_id' => null,
+            'worker_name' => array_values(array_filter($row['user'] ?? []))[0] ?? null,
+            'result' => self::ESIGNON_RESULT,
+            'result_color' => 'green',
+            'is_proxy' => true,
+            'has_contact' => Pii::hasContact($row['api_recipient_contact']),
+            'privacy_consent' => false,
+            'file_count' => 0,
+            'note' => null,
+        ], self::shareholderRepository()->eproxiesForProject($projectId, $filters));
+    }
+
+    /**
+     * Interleave newest-first e-proxies into newest-first reports without
+     * re-sorting the reports, whose upstream order is kept as-is.
+     *
+     * An e-proxy goes ahead of a report only when its day is later, so on a
+     * shared day the reports come first, and it never passes an undated report
+     * (Postgres puts those first in a descending sort). submissions() computes
+     * page offsets on the assumption that this rule is monotone — keep it so.
+     *
+     * @param  list<array<string, mixed>>  $reports
+     * @param  list<array<string, mixed>>  $eproxies
+     * @return list<array<string, mixed>>
+     */
+    private static function mergeByDay(array $reports, array $eproxies): array
+    {
+        $merged = [];
+        $next = 0;
+
+        foreach ($reports as $report) {
+            while (isset($eproxies[$next]) && $report['date'] !== null && $eproxies[$next]['date'] > $report['date']) {
+                $merged[] = $eproxies[$next++];
+            }
+
+            $merged[] = $report;
+        }
+
+        return [...$merged, ...array_slice($eproxies, $next)];
     }
 
     /**
@@ -572,6 +681,18 @@ final class ApiData
         }
 
         return Pii::birthYear(KoreanRegistration::from($registration)->dateOfBirth());
+    }
+
+    /**
+     * A PostgREST filter on a roster row's `user` for one worker. Roster
+     * assignment is by worker *name*, so the uuid is translated first; an unknown
+     * uuid matches nothing rather than everything.
+     */
+    private static function workerNameFilter(string $workerId): string
+    {
+        $name = self::profileRepository()->nameFor($workerId);
+
+        return $name === null ? 'cs.{__no_such_worker__}' : 'cs.{'.$name.'}';
     }
 
     private static function boolish(mixed $value): bool

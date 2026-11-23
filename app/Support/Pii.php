@@ -6,12 +6,11 @@ use Carbon\CarbonInterface;
 use Illuminate\Support\Str;
 
 /**
- * Redaction for anything leaving the app towards a third party — in practice the
- * MCP tools in app/Mcp, whose responses are transmitted to OpenAI / Anthropic /
- * Google and may be retained there.
+ * Redaction for anything leaving the app — in practice the REST API (ApiData),
+ * whose bearer tokens are handed to the client's dashboards and integrations.
  *
  * This is the security boundary for that egress, so it lives in one place and every
- * tool routes through it rather than each deciding what to trim. The rule is:
+ * endpoint routes through it rather than each deciding what to trim. The rule is:
  * enough identity to reason about a person, never enough to contact or identify
  * them off-system.
  */
@@ -19,6 +18,38 @@ final readonly class Pii
 {
     /** A 주민등록번호 is exactly this many digits; nothing else is one. */
     private const RRN_LENGTH = 13;
+
+    /**
+     * What a free-text note loses, in order, and what takes its place. Each
+     * pattern refuses to start or end inside a longer run of digits, so it never
+     * takes half of one and leaves the rest behind.
+     *
+     * @var array<string, string>
+     */
+    private const NOTE_REDACTIONS = [
+        // 실명번호, with or without its hyphen — before phones, which it contains.
+        '/(?<!\d)\d{6}\s?-?\s?\d{7}(?!\d)/u' => '[실명번호]',
+
+        // …and one the worker half-masked themselves (901231-1******).
+        '/(?<!\d)\d{6}\s?-?\s?\d{0,6}[*xX]+/u' => '[실명번호]',
+
+        '/[A-Z0-9._%+\-]+@[A-Z0-9.\-]+\.[A-Z]{2,}/iu' => '[이메일]',
+
+        // Mobile (010…), area-coded landline (02, 031…), 070 and 050x numbers,
+        // domestic or +82, separated by hyphens, dots, spaces or nothing.
+        '/(?<![\d+])(?:\+?82[\s.\-]?\(?0?|\(?0)(?:1[016789]|2|[3-6]\d|70|50\d)\)?[\s.\-]?\d{3,4}[\s.\-]?\d{4}(?!\d)/u' => '[전화번호]',
+
+        // 1588-1234 style national numbers.
+        '/(?<!\d)1[5-9]\d{2}[\s.\-]?\d{4}(?!\d)/u' => '[전화번호]',
+
+        // A local number written without its area code — but not a year range.
+        '/(?<![\d.\-])(?!(?:19|20)\d{2}-(?:19|20)\d{2}(?!\d))\d{3,4}-\d{4}(?![\d.\-])/u' => '[전화번호]',
+
+        // Anything else long enough to be a phone or account number. Spaces do not
+        // join runs here (a date followed by a count would read as one number) and
+        // neither do commas, so share counts like 2,720,000 survive.
+        '/(?<![\d.\-])\d(?:[.\-]?\d){8,}(?![\d.\-])/u' => '[전화번호]',
+    ];
 
     /**
      * A 실명번호 reduced to its birth code plus the century/sex digit —
@@ -92,5 +123,29 @@ final readonly class Pii
         }
 
         return false;
+    }
+
+    /**
+     * A worker's free-text note with what makes it contactable taken out — phone
+     * numbers, 실명번호 and email addresses become `[전화번호]`, `[실명번호]` and
+     * `[이메일]`, and the rest of the text is left as written.
+     *
+     * Workers type phone numbers into these notes, so this errs towards redacting:
+     * a long number that turns out to be harmless costs less than a phone number
+     * that gets through.
+     */
+    public static function note(?string $note): ?string
+    {
+        if (blank($note)) {
+            return null;
+        }
+
+        $redacted = trim((string) preg_replace(
+            array_keys(self::NOTE_REDACTIONS),
+            array_values(self::NOTE_REDACTIONS),
+            $note,
+        ));
+
+        return $redacted === '' ? null : $redacted;
     }
 }

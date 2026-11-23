@@ -4,6 +4,7 @@ namespace Tests\Unit;
 
 use App\Support\Pii;
 use Illuminate\Support\Carbon;
+use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
 
 class PiiTest extends TestCase
@@ -60,5 +61,67 @@ class PiiTest extends TestCase
         $this->assertTrue(Pii::hasContact(null, '010-1234-5678'));
         $this->assertFalse(Pii::hasContact(null, null));
         $this->assertFalse(Pii::hasContact('', '   '));
+    }
+
+    /**
+     * @return array<string, array{string, string}>
+     */
+    public static function contactsInNotes(): array
+    {
+        return [
+            'mobile, hyphenated' => ['010-1234-5678', '[전화번호]'],
+            'mobile, bare' => ['01012345678', '[전화번호]'],
+            'mobile, spaced' => ['010 1234 5678', '[전화번호]'],
+            'mobile, dotted' => ['010.1234.5678', '[전화번호]'],
+            'mobile, international' => ['+82 10-1234-5678', '[전화번호]'],
+            'mobile, international bare' => ['+821012345678', '[전화번호]'],
+            'Seoul landline' => ['02-123-4567', '[전화번호]'],
+            'Seoul landline, bracketed' => ['(02) 123-4567', '[전화번호]'],
+            'regional landline' => ['031-1234-5678', '[전화번호]'],
+            'internet phone' => ['070-1234-5678', '[전화번호]'],
+            'national number' => ['1588-1234', '[전화번호]'],
+            'local number without area code' => ['사무실 555-1234', '사무실 [전화번호]'],
+            'resident number' => ['901231-1234567', '[실명번호]'],
+            'resident number, bare' => ['9012311234567', '[실명번호]'],
+            'resident number, half masked' => ['본인 901231-1****** 확인', '본인 [실명번호] 확인'],
+            'email' => ['a.b@example.co.kr 로 메일', '[이메일] 로 메일'],
+            'inside Korean text' => ['연락처01012345678로 연락', '연락처[전화번호]로 연락'],
+            'account number' => ['신한 110-123-456789', '신한 [전화번호]'],
+        ];
+    }
+
+    #[DataProvider('contactsInNotes')]
+    public function test_it_redacts_contact_details_from_a_note(string $note, string $expected): void
+    {
+        $this->assertSame($expected, Pii::note($note));
+    }
+
+    /**
+     * @return array<string, array{string}>
+     */
+    public static function harmlessNotes(): array
+    {
+        return [
+            'share count' => ['2,720,000주 위임'],
+            'amount' => ['15,000,000원'],
+            'day and count' => ['9월 15일 3회 방문'],
+            'dotted date then a count' => ['2026.09.15 3회 방문'],
+            'iso date' => ['2026-09-15 재방문'],
+            'year range' => ['2025-2026 시즌'],
+        ];
+    }
+
+    #[DataProvider('harmlessNotes')]
+    public function test_it_leaves_ordinary_numbers_in_a_note_alone(string $note): void
+    {
+        $this->assertSame($note, Pii::note($note));
+    }
+
+    public function test_a_blank_note_becomes_null(): void
+    {
+        $this->assertNull(Pii::note(null));
+        $this->assertNull(Pii::note(''));
+        $this->assertNull(Pii::note("  \n "));
+        $this->assertSame('부재중', Pii::note('  부재중  '));
     }
 }

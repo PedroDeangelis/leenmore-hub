@@ -6,28 +6,31 @@ namespace App\Support\Supabase;
  * 활동 보고 — the per-visit reports a worker files against a shareholder.
  *
  * `is_deleted` is a genuine soft-delete flag and is always filtered out.
- * `note` is never selected: workers type phone numbers into it, so it is
- * personal data the API does not carry.
+ * `note` is free text that workers type phone numbers into. It is selected, but
+ * nothing may hand it out except through Pii::note(), which redacts them.
  */
 class SubmissionRepository
 {
     private const TABLE = 'submission';
 
-    private const COLUMNS = 'id,project_id,shareholder_id,user_id,user_name,date,result,contact_worker,files,privacy_consent_file,created_at';
+    private const COLUMNS = 'id,project_id,shareholder_id,user_id,user_name,date,result,note,contact_worker,files,privacy_consent_file,created_at';
 
     public function __construct(private readonly SupabaseClient $client) {}
 
     /**
+     * Newest first. Taken by offset rather than page because the API merges
+     * e-proxies into the same list, which shifts where each page starts.
+     *
      * @param  array<string, string|int>  $filters
      * @return array{rows: list<array<string, mixed>>, total: int}
      */
-    public function paginate(array $filters, int $page, int $perPage): array
+    public function slice(array $filters, int $offset, int $limit): array
     {
-        return $this->client->paginate(self::TABLE, [
+        return $this->client->slice(self::TABLE, [
             'select' => self::COLUMNS,
             'is_deleted' => 'is.false',
             'order' => 'date.desc,id.desc',
-        ] + $filters, $page, $perPage);
+        ] + $filters, $offset, $limit);
     }
 
     /**

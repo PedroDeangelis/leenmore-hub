@@ -76,11 +76,21 @@ class SupabaseClient
      */
     public function paginate(string $table, array $query, int $page, int $perPage): array
     {
-        $from = ($page - 1) * $perPage;
+        return $this->slice($table, $query, ($page - 1) * $perPage, $perPage);
+    }
 
+    /**
+     * Rows [$offset, $offset + $limit) plus the total — {@see paginate()} without
+     * the page arithmetic, for callers that merge another source into the page.
+     *
+     * @param  array<string, string|int>  $query
+     * @return array{rows: list<array<string, mixed>>, total: int}
+     */
+    public function slice(string $table, array $query, int $offset, int $limit): array
+    {
         $response = $this->get($table, $query + [
-            'limit' => $perPage,
-            'offset' => $from,
+            'limit' => $limit,
+            'offset' => $offset,
         ], ['Prefer' => 'count=exact']);
 
         return [

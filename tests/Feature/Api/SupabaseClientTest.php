@@ -34,6 +34,7 @@ class SupabaseClientTest extends TestCase
         ApiData::project(207);
         ApiData::shareholders(207, []);
         ApiData::submissions([]);
+        ApiData::submissions(['project_id' => 207]);
         ApiData::receipts([]);
         ApiData::activityData(207, []);
 
