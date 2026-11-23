@@ -428,5 +428,9 @@
     "required": "필수",
     "Token created.": "토큰이 생성되었습니다.",
     "Token blocked.": "토큰이 차단되었습니다.",
-    "Token deleted.": "토큰이 삭제되었습니다."
+    "Token deleted.": "토큰이 삭제되었습니다.",
+    "Create user": "사용자 생성",
+    "User created.": "사용자가 생성되었습니다.",
+    "Set an initial password and hand it to the person — there is no invitation email.": "초기 비밀번호를 설정한 뒤 본인에게 직접 전달하세요. 초대 이메일은 발송되지 않습니다.",
+    "Email (login)": "이메일 (로그인)"
 }

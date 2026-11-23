@@ -5,9 +5,16 @@
             <p class="mt-1 text-sm text-zinc-500">{{ __('All registered users') }}</p>
         </div>
 
-        <div class="w-full sm:w-64">
-            <x-ui.input wire:model.live.debounce.300ms="search" type="search" :placeholder="__('Search by name or email')"
-                aria-label="{{ __('Search users') }}" />
+        <div class="flex w-full items-center gap-3 sm:w-auto">
+            <div class="w-full sm:w-64">
+                <x-ui.input wire:model.live.debounce.300ms="search" type="search" :placeholder="__('Search by name or email')"
+                    aria-label="{{ __('Search users') }}" />
+            </div>
+
+            <x-ui.button wire:click="$set('showCreate', true)" class="shrink-0">
+                <x-heroicon-o-plus class="size-4" />
+                {{ __('Create user') }}
+            </x-ui.button>
         </div>
     </div>
 
@@ -63,4 +70,46 @@
             {{ $users->links() }}
         </div>
     @endif
+
+    {{-- New login account. Admin-only, like the rest of this page. --}}
+    <x-ui.modal model="showCreate">
+        <form wire:submit="create" class="space-y-5">
+            <div>
+                <h2 class="text-lg font-semibold text-zinc-900">{{ __('Create user') }}</h2>
+                <p class="mt-1 text-sm text-zinc-500">
+                    {{ __('Set an initial password and hand it to the person — there is no invitation email.') }}</p>
+            </div>
+
+            <x-ui.input wire:model="name" :label="__('Name')" type="text" required autofocus autocomplete="off" />
+
+            <x-ui.input wire:model="email" :label="__('Email (login)')" type="email" required autocomplete="off" />
+
+            <div class="grid grid-cols-2 gap-5">
+                <x-ui.select wire:model="role" :label="__('Role')">
+                    @foreach (\App\Enums\UserRole::cases() as $case)
+                        <option value="{{ $case->value }}">{{ $case->label() }}</option>
+                    @endforeach
+                </x-ui.select>
+
+                <x-ui.select wire:model="locale" :label="__('Language')">
+                    <option value="ko">{{ __('Korean') }}</option>
+                    <option value="en">{{ __('English') }}</option>
+                </x-ui.select>
+            </div>
+
+            <x-ui.input wire:model="password" :label="__('Password')" type="password" required autocomplete="new-password"
+                passwordrules="{{ \Illuminate\Validation\Rules\Password::defaults()->toPasswordRulesString() }}"
+                viewable />
+
+            <div class="flex justify-end gap-3">
+                <x-ui.button type="button" variant="outline" wire:click="$set('showCreate', false)">
+                    {{ __('Cancel') }}
+                </x-ui.button>
+                <x-ui.button type="submit">
+                    <span wire:loading.remove wire:target="create">{{ __('Create user') }}</span>
+                    <span wire:loading wire:target="create">{{ __('Creating…') }}</span>
+                </x-ui.button>
+            </div>
+        </form>
+    </x-ui.modal>
 </section>
