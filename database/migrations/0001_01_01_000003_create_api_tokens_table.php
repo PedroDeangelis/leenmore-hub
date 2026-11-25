@@ -18,6 +18,16 @@ return new class extends Migration
 {
     public function up(): void
     {
+        /*
+         * Databases that predate the migration squash already have this table
+         * (from 2026_07_25_000001 + 2026_07_30_000001), so this migration shows
+         * up as pending there. Skip it; 2026_11_25_000001 brings the legacy table
+         * up to this shape.
+         */
+        if (Schema::hasTable('api_tokens')) {
+            return;
+        }
+
         Schema::create('api_tokens', function (Blueprint $table) {
             $table->id();
 
